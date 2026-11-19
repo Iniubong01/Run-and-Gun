@@ -335,7 +335,7 @@ namespace PlayerControllers
             if (isGrounded && _verticalVelocity < 0f)
                 _verticalVelocity = -2f;
 
-            //? Keyboard and Joystick controls
+            // Keyboard and Joystick controls
             float h = Input.GetAxisRaw("Horizontal");
             float v = Input.GetAxisRaw("Vertical");
 
@@ -352,17 +352,13 @@ namespace PlayerControllers
 
             float speed = crouchingNow ? crouchSpeed : walkSpeed;
 
-            // -- INPUT DIRECTION
+            // Input direction
             Vector3 move = transform.right * h + transform.forward * v;
+            move = Vector3.ClampMagnitude(move, 1f);
 
-            float inputMag = Mathf.Clamp01(move.magnitude);
-
-            if (inputMag > 1f)
-                move.Normalize();
-
-            // -- ANIMATION
-            float forwardBack = v;
-            float leftRight = h;
+            // Animation
+            float forwardBack = Mathf.Abs(v) > 0.1f ? Mathf.Sign(v) : 0f;
+            float leftRight = Mathf.Abs(h) > 0.1f ? Mathf.Sign(h) : 0f;
 
             if (animator != null)
             {
@@ -371,10 +367,10 @@ namespace PlayerControllers
                 animator.SetBool("Crouching", crouchingNow);
             }
 
-            // -- JUMP
+            // Jump
             HandleJumpInput();
 
-            // -- MOVEMENT
+            // Movement
             move *= speed;
 
             _verticalVelocity += gravity * Time.deltaTime;
@@ -384,7 +380,7 @@ namespace PlayerControllers
             _cc.Move(move * Time.deltaTime);
         }
 
-        // -- KEYBOARD JUMP INPUT
+        // Keyboard jump handling
         private void HandleJumpInput()
         {
             if (Input.GetButtonDown("Jump"))
@@ -675,8 +671,6 @@ namespace PlayerControllers
             // STOP ACTIVE PLAYER COROUTINES
             StopAllCoroutines();
 
-            // RESTORE TIME SCALE
-            Time.timeScale = 1f;
 
             // RESET CHARACTER CONTROLLER
             if (_cc != null)

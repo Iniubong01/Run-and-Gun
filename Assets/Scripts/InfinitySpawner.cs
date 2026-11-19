@@ -62,6 +62,15 @@ public class InfinitySpawner : MonoBehaviour
     [Header("Player")]
     public Transform player;
 
+    // PLAYER SPAWN DISTANCE
+    [Header("Player Spawn Distance")]
+    public float spawnDistanceFromPlayer = 50f;
+    public float spawnDistanceVariation = 7f;
+
+    [Header("Spawn Z Limits")]
+    public float minZ = -12f;
+    public float maxZ = -2f;
+
     // TIER UNLOCK TIMES
     [Header("Enemy Tier Unlock Times")]
     public Vector2 enemyTier2UnlockTime = new Vector2(60f, 90f);
@@ -581,24 +590,53 @@ public class InfinitySpawner : MonoBehaviour
         activeExplosiveCount = 0;
     }
 
-    // RANDOM TUNNEL SPAWN POSITION
+    // Random spawn positions from the player's current x position
     private bool TryGetRandomSpawnPosition(
         SpawnArea area,
         out Vector3 spawnPosition)
     {
         spawnPosition = Vector3.zero;
 
-        if (area == null || area.center == null)
+        if (area == null || player == null)
             return false;
+
+        float minimumDistance = Mathf.Max(
+            0.1f,
+            spawnDistanceFromPlayer - spawnDistanceVariation
+        );
+
+        float maximumDistance = Mathf.Max(
+            minimumDistance,
+            spawnDistanceFromPlayer + spawnDistanceVariation
+        );
+
+        float lowerZ = Mathf.Min(minZ, maxZ);
+        float upperZ = Mathf.Max(minZ, maxZ);
 
         for (int i = 0; i < area.attempts; i++)
         {
-            Vector2 randomCircle =
-                Random.insideUnitCircle * area.radius;
+            // Randomizes the distance from the player
+            float randomDistance = Random.Range(
+                minimumDistance,
+                maximumDistance
+            );
 
-            Vector3 randomPosition = area.center.position +
-                new Vector3(randomCircle.x, 0f, randomCircle.y);
+            // Randomizes whether to spawn in front or behind
+            float direction = Random.value < 0.5f ? -1f : 1f;
 
+            // Calculates the spawn position
+            float randomX = player.position.x +
+                (randomDistance * direction);
+
+            float randomZ = Random.Range(lowerZ, upperZ);
+
+            Vector3 randomPosition = new Vector3(
+                randomX,
+                player.position.y,
+                randomZ
+            );
+
+            // Checks for the ground
             Vector3 rayOrigin = randomPosition +
                 Vector3.up * groundCheckDistance;
 
@@ -615,6 +653,7 @@ public class InfinitySpawner : MonoBehaviour
 
             Vector3 candidate = groundHit.point;
 
+            // Checks if the spawn position is occupied
             if (Physics.CheckSphere(
                 candidate + Vector3.up * spawnCheckRadius,
                 spawnCheckRadius,
@@ -624,8 +663,8 @@ public class InfinitySpawner : MonoBehaviour
                 continue;
             }
 
-            if (player != null &&
-                Vector3.Distance(candidate, player.position) <
+            // Checks minimum player distance
+            if (Vector3.Distance(candidate, player.position) <
                 area.minimumPlayerDistance)
             {
                 continue;

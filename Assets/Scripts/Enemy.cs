@@ -64,7 +64,7 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float slowMotionDuration = 0.6f;
     [SerializeField] private float timeScaleRestoreSpeed = 3f;
     [SerializeField] private float deathAnimationDuration = 0.5f;
-
+    [SerializeField] Transform effectParent;
     private FPP_PlayerController playerController;
     private Coroutine deathSequence;
 
@@ -106,7 +106,7 @@ public class Enemy : MonoBehaviour
 
         spawnTracker = GetComponent<SpawnTracker>();
 
-        // Csche original values
+        // Cache original values
         originalHealth = health;
         originalTimeBetweenAttacks = timeBetweenAttacks;
         originalSightRange = sightRange;
@@ -117,14 +117,13 @@ public class Enemy : MonoBehaviour
         originalDamage = damage;
     }
 
-    // START
     private void Start()
     {
-        enemyAnim.SetTrigger("Walk");
+        enemyAnim.SetTrigger("Idle");
         sfxSource = GameObject.Find("Sfx Audiosource").GetComponent<AudioSource>();
+        effectParent = GameObject.Find("Effect parent").GetComponent<Transform>();
     }
 
-    // UPDATE
     private void Update()
     {
         if (isDead)
@@ -157,9 +156,14 @@ public class Enemy : MonoBehaviour
         {
             Patrol();
         }
+
+        if(transform.position.y < -10f)
+        {
+            DestroyEnemy();
+        }
     }
 
-    // PATROL
+    // Patrol
     private void Patrol()
     {
         attacking = false;
@@ -172,9 +176,9 @@ public class Enemy : MonoBehaviour
 
         enemyAnim.ResetTrigger("Run");
         enemyAnim.ResetTrigger("Shoot");
-        enemyAnim.ResetTrigger("Idle");
+        enemyAnim.ResetTrigger("Walk");
 
-        enemyAnim.SetTrigger("Walk");
+        enemyAnim.SetTrigger("Idle");
 
         Vector3 distanceToWalkPoint =
             transform.position - walkPoint;
@@ -190,7 +194,7 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // SEARCH WALK POINT
+    // Search walkpoint
     private void SearchWalkPoint()
     {
         float randomZ =
@@ -215,7 +219,7 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // HEALTH
+    // Health reduction
     public void ReduceEnemyHealth(int damage)
     {
         if (isDead)
@@ -267,7 +271,6 @@ public class Enemy : MonoBehaviour
     }
 
     // Shoot player
-
     private void ShootPlayer()
     {
         transform.rotation =
@@ -281,9 +284,9 @@ public class Enemy : MonoBehaviour
 
         if (!alreadyAttacked)
         {
-            enemyAnim.ResetTrigger("Walk");
-            enemyAnim.ResetTrigger("Idle");
-            enemyAnim.ResetTrigger("Run");
+            // enemyAnim.ResetTrigger("Walk");
+            // enemyAnim.ResetTrigger("Idle");
+            // enemyAnim.ResetTrigger("Run");
 
             enemyAnim.SetTrigger("Shoot");
 
@@ -300,18 +303,11 @@ public class Enemy : MonoBehaviour
             Vector3 origin = shootPoint.position;
 
             Ray ray =
-                new Ray(
-                    shootPoint.position,
-                    shootPoint.forward
-                );
+                new Ray(shootPoint.position, shootPoint.forward);
 
-            if (Physics.Raycast(
-                ray,
-                out RaycastHit hit,
-                shootRange))
+            if (Physics.Raycast(ray, out RaycastHit hit, shootRange))
             {
-                FPP_PlayerController hitPlayer =
-                    hit.collider.GetComponentInParent<FPP_PlayerController>();
+                FPP_PlayerController hitPlayer = hit.collider.GetComponentInParent<FPP_PlayerController>();
 
                 if (hit.collider.CompareTag("Player"))
                 {
@@ -321,26 +317,10 @@ public class Enemy : MonoBehaviour
                     }
                 }
 
+                // Spawn effects and clean up heirachy
                 if (hitEffect != null)
                 {
-                    Transform particleParent = null;
-
-                    if (hitPlayer != null)
-                    {
-                        particleParent =
-                            hitPlayer.particleParent;
-                    }
-
-                    GameObject effect = Instantiate(
-                        hitEffect,
-                        hit.point,
-                        Quaternion.LookRotation(hit.normal)
-                    );
-
-                    if (particleParent != null)
-                    {
-                        effect.transform.SetParent(particleParent, true);
-                    }
+                    GameObject effect = Instantiate(hitEffect, hit.point, Quaternion.LookRotation(hit.normal), effectParent);
                 }
             }
 
@@ -350,8 +330,7 @@ public class Enemy : MonoBehaviour
             Invoke(nameof(ResetAttack), timeBetweenAttacks);
         }
 
-        float distanceToPlayer =
-            Vector3.Distance(transform.position, player.position);
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
         if (distanceToPlayer <= distanceFromPlayer)
         {
@@ -386,7 +365,6 @@ public class Enemy : MonoBehaviour
         isDead = true;
 
         // Register player kill
-
         if (GameManager.Instance != null)
         {
             GameManager.Instance.RegisterEnemyKill();

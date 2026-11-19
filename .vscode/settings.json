@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "My-project_.slnx"
+    "dotnet.defaultSolution": "Run and Gun.slnx"
 }
