@@ -14162,14 +14162,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 1369714153861793126, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1721179876244100803, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
+    - target: {fileID: 754654321984988152, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
+      propertyPath: player
+      value: 
+      objectReference: {fileID: 930324367}
+    - target: {fileID: 884196681413813616, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
+      propertyPath: player
+      value: 
+      objectReference: {fileID: 930324367}
+    - target: {fileID: 4422816494908350257, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
+      propertyPath: player
+      value: 
+      objectReference: {fileID: 930324367}
     - target: {fileID: 4479443104695853659, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -14210,21 +14214,9 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4760912199088419789, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 5360920978125377670, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
       propertyPath: m_Name
       value: Subway tunnel + env
-      objectReference: {fileID: 0}
-    - target: {fileID: 5360920978125377670, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8326106570120013450, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
-      propertyPath: m_IsActive
-      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -75211,54 +75203,9 @@ MonoBehaviour:
     prefabs:
     - {fileID: 1242737160125458054, guid: 606337aaa1a50864cac70de4faa7ba62, type: 3}
     spawnWeight: 2
-  enemySpawnAreas:
-  - areaName: Center
-    center: {fileID: 2120684835}
-    radius: 4
-    minimumPlayerDistance: 4
-    groundLayer:
-      serializedVersion: 2
-      m_Bits: 128
-    obstacleLayer:
-      serializedVersion: 2
-      m_Bits: 256
-    attempts: 1
-  - areaName: Upfront
-    center: {fileID: 1557640157}
-    radius: 4
-    minimumPlayerDistance: 4
-    groundLayer:
-      serializedVersion: 2
-      m_Bits: 128
-    obstacleLayer:
-      serializedVersion: 2
-      m_Bits: 256
-    attempts: 1
-  - areaName: Center
-    center: {fileID: 714230007}
-    radius: 4
-    minimumPlayerDistance: 4
-    groundLayer:
-      serializedVersion: 2
-      m_Bits: 128
-    obstacleLayer:
-      serializedVersion: 2
-      m_Bits: 256
-    attempts: 1
-  - areaName: Center
-    center: {fileID: 1746304574}
-    radius: 4
-    minimumPlayerDistance: 4
-    groundLayer:
-      serializedVersion: 2
-      m_Bits: 128
-    obstacleLayer:
-      serializedVersion: 2
-      m_Bits: 256
-    attempts: 1
-  explosiveSpawnAreas: []
   spawnCheckRadius: 0.5
   groundCheckDistance: 10
+  minimumPlayerDistance: 10
   player: {fileID: 930324367}
   spawnDistanceFromPlayer: 12
   spawnDistanceVariation: 6
@@ -75275,6 +75222,12 @@ MonoBehaviour:
   startingExplosiveInterval: 20
   minimumExplosiveInterval: 15
   difficultyRampDuration: 900
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 128
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 256
   startingEnemyCount: 1
   maximumEnemyCountPerWave: 5
   enemyQuantityIncreaseInterval: 80

@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 1510485946437846248}
   - component: {fileID: 4423390537682463710}
   - component: {fileID: 2568354089031938679}
+  - component: {fileID: -3893601179324060507}
   m_Layer: 8
   m_Name: Box 3
   m_TagString: Obstacle
@@ -175,7 +176,19 @@ MonoBehaviour:
   explosionDistance: 4
   damageDistance: 10
   damage: 30
-  launchForce: 2.5
-  upwardForce: 0.6
+  launchForce: 12
+  upwardForce: 2
   explodeEffect: {fileID: 3232243226562652303, guid: 806975816cfe3214d98797c659d839cc, type: 3}
   destroyAfterExplosion: 0.1
+--- !u!114 &-3893601179324060507
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 315313294890888534}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ffa55cb2bb11ff041be6fd6d6f74dd90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpawnTracker

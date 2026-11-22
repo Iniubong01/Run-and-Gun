@@ -47,6 +47,7 @@ public class Obstacle : MonoBehaviour
     private void OnEnable()
     {
         ResetObstacle();
+        FindPlayer();
     }
 
     private void Start()
@@ -214,12 +215,15 @@ public class Obstacle : MonoBehaviour
         returnCoroutine = StartCoroutine(ReturnAfterExplosion());
     }
 
-    // -- RETURN TO POOL AFTER EXPLOSION
+    // Return to pool after explosion
     private IEnumerator ReturnAfterExplosion()
     {
         yield return new WaitForSecondsRealtime(destroyAfterExplosion);
 
         returnCoroutine = null;
+
+        if (spawnTracker == null)
+            spawnTracker = GetComponent<SpawnTracker>();
 
         if (spawnTracker != null)
             spawnTracker.ReturnToPool();

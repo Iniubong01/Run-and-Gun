@@ -20,23 +20,6 @@ public class InfinitySpawner : MonoBehaviour
         public float spawnWeight = 1f;
     }
 
-    [System.Serializable]
-    public class SpawnArea
-    {
-        public string areaName;
-        public Transform center;
-
-        [Min(0.1f)]
-        public float radius = 5f;
-
-        public float minimumPlayerDistance = 10f;
-        public LayerMask groundLayer;
-        public LayerMask obstacleLayer;
-
-        [Min(1)]
-        public int attempts = 20;
-    }
-
     // ENEMY TIERS
     [Header("Enemy Tiers")]
     public SpawnTier[] enemyTiers = new SpawnTier[4];
@@ -45,19 +28,14 @@ public class InfinitySpawner : MonoBehaviour
     [Header("Explosive Tiers")]
     public SpawnTier[] explosiveTiers = new SpawnTier[4];
 
-    // SPAWN AREAS
-    [Header("Enemy Spawn Areas")]
-    public SpawnArea[] enemySpawnAreas;
-
-    [Header("Explosive Spawn Areas")]
-    public SpawnArea[] explosiveSpawnAreas;
-
     [Header("Spawn Validation")]
     [Min(0.1f)]
     public float spawnCheckRadius = 0.5f;
 
     [Min(1f)]
     public float groundCheckDistance = 10f;
+    [Min(1f)]
+    public float minimumPlayerDistance = 10f;
 
     [Header("Player")]
     public Transform player;
@@ -93,6 +71,10 @@ public class InfinitySpawner : MonoBehaviour
 
     [Header("Difficulty Ramp")]
     public float difficultyRampDuration = 600f;
+
+    [Header("Layers")]
+    public LayerMask groundLayer;
+    public LayerMask obstacleLayer;
 
     // SPAWN QUANTITIES
     [Header("Enemy Spawn Quantity")]
@@ -316,10 +298,7 @@ public class InfinitySpawner : MonoBehaviour
 
     private void SpawnEnemy()
     {
-        SpawnTier tier = GetRandomUnlockedTier(
-            enemyTiers,
-            unlockedEnemyTier
-        );
+        SpawnTier tier = GetRandomUnlockedTier(enemyTiers, unlockedEnemyTier);
 
         if (tier == null)
             return;
@@ -329,15 +308,10 @@ public class InfinitySpawner : MonoBehaviour
         if (prefab == null)
             return;
 
-        SpawnArea area = GetRandomSpawnArea(enemySpawnAreas);
-
-        if (area == null)
+        if (!TryGetRandomSpawnPosition(out Vector3 position))
             return;
 
-        if (!TryGetRandomSpawnPosition(area, out Vector3 position))
-            return;
-
-        GameObject enemy = GetPooledObject(prefab, position, area.center.rotation, false);
+        GameObject enemy = GetPooledObject(prefab, position, Quaternion.identity, false);
 
         if (enemy == null)
             return;
@@ -369,13 +343,13 @@ public class InfinitySpawner : MonoBehaviour
             }
         }
     }
-
+    
+    // Spawn obstacles
     private void SpawnExplosive()
     {
-        SpawnTier tier = GetRandomUnlockedTier(
-            explosiveTiers,
-            unlockedExplosiveTier
-        );
+        Debug.Log("Attempting to spawn obstacle...");
+
+        SpawnTier tier = GetRandomUnlockedTier(explosiveTiers,  unlockedExplosiveTier);
 
         if (tier == null)
             return;
@@ -385,25 +359,19 @@ public class InfinitySpawner : MonoBehaviour
         if (prefab == null)
             return;
 
-        SpawnArea area = GetRandomSpawnArea(explosiveSpawnAreas);
-
-        if (area == null)
+        if (!TryGetRandomSpawnPosition(out Vector3 position))
             return;
 
-        if (!TryGetRandomSpawnPosition(area, out Vector3 position))
-            return;
-
-        GameObject explosive = GetPooledObject(
-            prefab,
-            position,
-            area.center.rotation,
-            true
-        );
+        GameObject explosive = GetPooledObject(prefab, position, Quaternion.identity, true);
 
         if (explosive == null)
+        {
+            Debug.LogWarning("Obstacle spawn failed: GetPooledObject returned null.");
             return;
+        }
 
         activeExplosiveCount++;
+        Debug.Log("Obstacle successfully spawned: " + explosive.name);
     }
 
     // Get object from pool
@@ -591,29 +559,21 @@ public class InfinitySpawner : MonoBehaviour
     }
 
     // Random spawn positions from the player's current x position
-    private bool TryGetRandomSpawnPosition(
-        SpawnArea area,
-        out Vector3 spawnPosition)
+    private bool TryGetRandomSpawnPosition(out Vector3 spawnPosition)
     {
         spawnPosition = Vector3.zero;
 
-        if (area == null || player == null)
+        if (player == null)
             return false;
 
-        float minimumDistance = Mathf.Max(
-            0.1f,
-            spawnDistanceFromPlayer - spawnDistanceVariation
-        );
+        float minimumDistance = Mathf.Max(0.1f, spawnDistanceFromPlayer - spawnDistanceVariation);
 
-        float maximumDistance = Mathf.Max(
-            minimumDistance,
-            spawnDistanceFromPlayer + spawnDistanceVariation
-        );
+        float maximumDistance = Mathf.Max(minimumDistance, spawnDistanceFromPlayer + spawnDistanceVariation );
 
         float lowerZ = Mathf.Min(minZ, maxZ);
         float upperZ = Mathf.Max(minZ, maxZ);
 
-        for (int i = 0; i < area.attempts; i++)
+        for (int i = 0; i < 20; i++)
         {
             // Randomizes the distance from the player
             float randomDistance = Random.Range(
@@ -630,11 +590,7 @@ public class InfinitySpawner : MonoBehaviour
 
             float randomZ = Random.Range(lowerZ, upperZ);
 
-            Vector3 randomPosition = new Vector3(
-                randomX,
-                player.position.y,
-                randomZ
-            );
+            Vector3 randomPosition = new Vector3(randomX, player.position.y, randomZ);
 
             // Checks for the ground
             Vector3 rayOrigin = randomPosition +
@@ -645,7 +601,7 @@ public class InfinitySpawner : MonoBehaviour
                 Vector3.down,
                 out RaycastHit groundHit,
                 groundCheckDistance * 2f,
-                area.groundLayer,
+                groundLayer,
                 QueryTriggerInteraction.Ignore))
             {
                 continue;
@@ -657,7 +613,7 @@ public class InfinitySpawner : MonoBehaviour
             if (Physics.CheckSphere(
                 candidate + Vector3.up * spawnCheckRadius,
                 spawnCheckRadius,
-                area.obstacleLayer,
+                obstacleLayer,
                 QueryTriggerInteraction.Ignore))
             {
                 continue;
@@ -665,7 +621,7 @@ public class InfinitySpawner : MonoBehaviour
 
             // Checks minimum player distance
             if (Vector3.Distance(candidate, player.position) <
-                area.minimumPlayerDistance)
+                minimumPlayerDistance)
             {
                 continue;
             }
@@ -675,15 +631,6 @@ public class InfinitySpawner : MonoBehaviour
         }
 
         return false;
-    }
-
-    // SPAWN AREA SELECTION
-    private SpawnArea GetRandomSpawnArea(SpawnArea[] areas)
-    {
-        if (areas == null || areas.Length == 0)
-            return null;
-
-        return areas[Random.Range(0, areas.Length)];
     }
 
     // TIER SELECTION
@@ -818,13 +765,13 @@ public class InfinitySpawner : MonoBehaviour
         }
     }
 
-    // RESTART SPAWNING
+    // Restart spawning
     public void RestartSpawning()
     {
         InitializeSpawner();
     }
 
-    // RESET EVERYTHING FOR A NEW RUN
+    // Reset everything for a new run
     public void RestartSpawner()
     {
         InitializeSpawner();
