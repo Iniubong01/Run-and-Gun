@@ -63,14 +63,12 @@ public class Obstacle : MonoBehaviour
         float sqrDistance =
             (player.position - transform.position).sqrMagnitude;
 
-        if (!launched &&
-            sqrDistance <= activationDistance * activationDistance)
+        if (sqrDistance <= activationDistance * activationDistance)
         {
             Launch();
         }
 
-        if (launched &&
-            sqrDistance <= explosionDistance * explosionDistance)
+        if (sqrDistance <= explosionDistance * explosionDistance)
         {
             Explode();
         }

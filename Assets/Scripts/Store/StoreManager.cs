@@ -36,13 +36,6 @@ public class StoreManager : MonoBehaviour
     [Header("Coins")]
     [SerializeField] private int totalCoins;
 
-    // HUD
-    [Header("Item HUD Quantity")]
-    [SerializeField] private TextMeshProUGUI healthQuantityText;
-    [SerializeField] private TextMeshProUGUI ammoQuantityText;
-    [SerializeField] private TextMeshProUGUI extraLifeQuantityText;
-    [SerializeField] private TextMeshProUGUI teleportQuantityText;
-
     [SerializeField] private TextMeshProUGUI coinText;
 
     [Header("Insufficient Coins Popup")]
@@ -76,11 +69,13 @@ public class StoreManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
+            Destroy(gameObject);
             return;
         }
 
         Instance = this;
 
+        // Load the saved coin balance
         totalCoins = PlayerPrefs.GetInt(COINS_KEY, totalCoins);
 
         selectedGun = PlayerPrefs.GetInt(GUN_KEY, 0);
@@ -101,7 +96,7 @@ public class StoreManager : MonoBehaviour
         LoadUpgradeSelections();
 
         ActivateSelectedUpgrades();
-        UpdateItemHUD();
+        // UpdateItemHUD();
         UpdateCoinUI();
     }
 
@@ -201,7 +196,7 @@ public class StoreManager : MonoBehaviour
         PlayerPrefs.SetInt(ITEM_KEY, selectedItem);
         PlayerPrefs.SetInt(COINS_KEY, totalCoins);
 
-        UpdateItemHUD();
+        // UpdateItemHUD();
         PlayerPrefs.Save();
     }
 
@@ -304,21 +299,6 @@ public class StoreManager : MonoBehaviour
         LoadUpgradeState(upgrade);
     }
 
-    // Updates the item quantity texts in the HUD
-    public void UpdateItemHUD()
-    {
-        if (healthQuantityText != null)
-            healthQuantityText.text = GetItemCount(StoreItemType.Health).ToString();
-
-        if (ammoQuantityText != null)
-            ammoQuantityText.text = GetItemCount(StoreItemType.Ammo).ToString();
-
-        if (extraLifeQuantityText != null)
-            extraLifeQuantityText.text = GetItemCount(StoreItemType.ExtraLife).ToString();
-
-        if (teleportQuantityText != null)
-            teleportQuantityText.text = GetItemCount(StoreItemType.Teleport).ToString();
-    }
 
     // Loads saved upgrade selections
     private void LoadUpgradeSelections()
@@ -471,7 +451,7 @@ public class StoreManager : MonoBehaviour
             SaveItemQuantity(upgrade, quantity);
             upgrade.SetItemSlots(quantity);
 
-            UpdateItemHUD();
+            // UpdateItemHUD();
         }
         else
         {
@@ -779,7 +759,7 @@ public class StoreManager : MonoBehaviour
             PlayerPrefs.Save();
 
             UpdatePurchaseButtons();
-            UpdateItemHUD();
+            // UpdateItemHUD();
 
             return true;
         }
@@ -840,7 +820,7 @@ public class StoreManager : MonoBehaviour
         PlayerPrefs.Save();
 
         // Update item HUD
-        UpdateItemHUD();
+        // UpdateItemHUD();
     }
 
     // Loads and updates the purchase / use button states
@@ -877,7 +857,7 @@ public class StoreManager : MonoBehaviour
         UpdatePurchaseButtons();
 
         // Update item HUD
-        UpdateItemHUD();
+        // UpdateItemHUD();
 
         // Update coin UI
         UpdateCoinUI();

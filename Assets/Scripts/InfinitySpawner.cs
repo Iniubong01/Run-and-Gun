@@ -2,7 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using DG.Tweening;
 using PlayerControllers;
+using TMPro;
 
 public class InfinitySpawner : MonoBehaviour
 {
@@ -76,6 +79,8 @@ public class InfinitySpawner : MonoBehaviour
     public LayerMask groundLayer;
     public LayerMask obstacleLayer;
 
+    public GameObject cam;
+
     // SPAWN QUANTITIES
     [Header("Enemy Spawn Quantity")]
     public int startingEnemyCount = 1;
@@ -95,6 +100,11 @@ public class InfinitySpawner : MonoBehaviour
     // RUNTIME
     [Header("Runtime")]
     public bool spawningEnabled = true;
+
+    [Header("Loading UI")]
+    [SerializeField] private Slider progressBar;
+    [SerializeField] private Text progressText;
+    public CanvasGroup loadingCanvas;
 
     [Range(1, 4)]
     public int unlockedEnemyTier = 1;
@@ -120,7 +130,13 @@ public class InfinitySpawner : MonoBehaviour
 
     private Coroutine enemySpawnRoutine;
     private Coroutine explosiveSpawnRoutine;
-    private UI_Manager uiManager;
+
+    // HUD
+    [Header("Item HUD Quantity")]
+    [SerializeField] private TextMeshProUGUI healthQuantityText;
+    [SerializeField] private TextMeshProUGUI ammoQuantityText;
+    [SerializeField] private TextMeshProUGUI extraLifeQuantityText;
+    [SerializeField] private TextMeshProUGUI teleportQuantityText;
 
     // OBJECT POOLING
     private class PooledObjectInfo
@@ -138,9 +154,10 @@ public class InfinitySpawner : MonoBehaviour
     // Initialization
     private void Start()
     {
+        StartCoroutine(PlayIntroSequence());
         FindPlayer();
         InitializeSpawner();
-        uiManager = GameObject.Find("UI Manager").GetComponent<UI_Manager>();
+        UpdateItemHUD();
     }
 
     private void FindPlayer()
@@ -151,7 +168,12 @@ public class InfinitySpawner : MonoBehaviour
         FPP_PlayerController controller = GameObject.Find("Player").GetComponent<FPP_PlayerController>();
 
         if (controller != null)
-            player = controller.transform;
+        {
+            controller.gameObject.SetActive(true);
+            cam = GameObject.Find("UI Camera");
+            cam.SetActive(false);
+            player = controller.transform; 
+        }
     }
 
     // Initialize spawner
@@ -224,6 +246,21 @@ public class InfinitySpawner : MonoBehaviour
         UpdateExplosiveTierUnlocks();
     }
 
+    public void UpdateItemHUD()
+    {
+        if (healthQuantityText != null)
+            healthQuantityText.text = StoreManager.Instance.GetItemCount(StoreItemType.Health).ToString();
+
+        if (ammoQuantityText != null)
+            ammoQuantityText.text = StoreManager.Instance.GetItemCount(StoreItemType.Ammo).ToString();
+
+        if (extraLifeQuantityText != null)
+            extraLifeQuantityText.text = StoreManager.Instance.GetItemCount(StoreItemType.ExtraLife).ToString();
+
+        if (teleportQuantityText != null)
+            teleportQuantityText.text = StoreManager.Instance.GetItemCount(StoreItemType.Teleport).ToString();
+    }
+
     // Enemy tier progression
     private void UpdateEnemyTierUnlocks()
     {
@@ -271,7 +308,7 @@ public class InfinitySpawner : MonoBehaviour
     {
         if(activeEnemyCount > 7)
         {
-            uiManager.ShowAlert();
+            UI_Manager.Instance.ShowAlert();
         }
 
         while (spawningEnabled)
@@ -781,4 +818,87 @@ public class InfinitySpawner : MonoBehaviour
     {
         StopSpawning();
     }
+
+    #region Slider
+    // Intro sequence
+    private IEnumerator PlayIntroSequence()
+    {
+        // Show loading screen.
+        if (loadingCanvas != null)
+        {
+            loadingCanvas.gameObject.SetActive(true);
+            loadingCanvas.alpha = 1f;
+            loadingCanvas.interactable = true;
+            loadingCanvas.blocksRaycasts = true;
+        }
+
+        if (progressBar != null)
+            progressBar.value = 0f;
+
+        if (progressText != null)
+            progressText.text = "0%";
+
+        yield return StartCoroutine(AnimateLoadingSlider());
+
+        // Fade out loading screen.
+        if (loadingCanvas != null)
+        {
+            yield return loadingCanvas.DOFade(0f, 0.2f)
+                .SetEase(Ease.InOutSine)
+                .WaitForCompletion();
+
+            loadingCanvas.gameObject.SetActive(false);
+            loadingCanvas.alpha = 0f;
+            loadingCanvas.interactable = false;
+            loadingCanvas.blocksRaycasts = false;
+        }
+    }
+
+    private IEnumerator AnimateLoadingSlider()
+    {
+        if (progressBar == null || progressText == null)
+            yield break;
+
+        float displayedProgress = 0f;
+
+        while (displayedProgress < 1f)
+        {
+            float pauseDuration = Random.Range(0.2f, 0.35f);
+            yield return new WaitForSeconds(pauseDuration);
+
+            float segmentDuration = Random.Range(0.1f, 0.3f);
+            float segmentStart = displayedProgress;
+            float segmentEnd = Mathf.Min(1f, segmentStart + Random.Range(0.12f, 0.28f));
+
+            float elapsed = 0f;
+
+            while (elapsed < segmentDuration)
+            {
+                elapsed += Time.deltaTime;
+
+                float t = Mathf.Clamp01(elapsed / segmentDuration);
+
+                displayedProgress = Mathf.Lerp(
+                    segmentStart,
+                    segmentEnd,
+                    Mathf.SmoothStep(0f, 1f, t)
+                );
+
+                progressBar.value = displayedProgress;
+                progressText.text = Mathf.RoundToInt(displayedProgress * 100f) + "%";
+
+                yield return null;
+            }
+
+            displayedProgress = segmentEnd;
+            progressBar.value = displayedProgress;
+            progressText.text = Mathf.RoundToInt(displayedProgress * 100f) + "%";
+        }
+
+        progressBar.value = 1f;
+        progressText.text = "100%";
+
+        yield return new WaitForSeconds(0.4f);
+    }
+    #endregion
 }

@@ -46,9 +46,6 @@ public class GameManager : MonoBehaviour
     private int coinsGained;
     private int totalCoins;
 
-    [Header("References")]
-    [SerializeField] private UI_Manager uiManager;
-
     [Header("Double Kill")]
     public float doubleKillWindow = 3f;
 
@@ -82,17 +79,6 @@ public class GameManager : MonoBehaviour
         UpdateTimerUI();
         UpdateHighScoreUI();
         UpdateTotalCoinsUI();
-    }
-
-    private void Start()
-    {
-        if (uiManager == null)
-        {
-            GameObject uiObject = GameObject.Find("UI Manager");
-
-            if (uiObject != null)
-                uiManager = uiObject.GetComponent<UI_Manager>();
-        }
     }
 
     private void Update()
@@ -132,8 +118,7 @@ public class GameManager : MonoBehaviour
         if (hasRecentKill &&
             currentTime - lastKillTime <= doubleKillWindow)
         {
-            if (uiManager != null)
-                uiManager.ShowDoubleKill();
+            UI_Manager.Instance.ShowDoubleKill();
         }
 
         lastKillTime = currentTime;
@@ -244,9 +229,7 @@ public class GameManager : MonoBehaviour
         if (achievedNewRecord)
         {
             isNewHighScore = true;
-
-            if (uiManager != null)
-                uiManager.ShowNewHighScore();
+            UI_Manager.Instance.ShowNewHighScore();
         }
 
         SaveGameData();

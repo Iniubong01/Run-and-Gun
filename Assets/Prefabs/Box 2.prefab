@@ -175,9 +175,9 @@ MonoBehaviour:
   activationDistance: 10
   explosionDistance: 4
   damageDistance: 10
-  damage: 30
-  launchForce: 12
-  upwardForce: 2
+  damage: 60
+  launchForce: 10
+  upwardForce: 0.65
   explodeEffect: {fileID: 3232243226562652303, guid: 806975816cfe3214d98797c659d839cc, type: 3}
   destroyAfterExplosion: 0.1
 --- !u!114 &-316173313176224872

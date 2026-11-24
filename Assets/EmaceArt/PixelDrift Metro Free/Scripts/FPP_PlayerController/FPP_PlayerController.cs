@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using System.Collections;
 using TMPro;
@@ -55,10 +54,6 @@ namespace PlayerControllers
 
         private Animator animator;
 
-        // -- Audio
-        [SerializeField] private AudioSource sfxSource;
-        [SerializeField] private AudioClip shootClip, jumpClip, footStepClip, reloadClip, emptyClip, reviveClip;
-
         // -- Ammunition Handling / Shooting
         public float ammoCount = 5;
         public float clipCount = 25;
@@ -83,7 +78,6 @@ namespace PlayerControllers
 
         // -- Reference
         private CrosshairController ch_controller;
-        public UI_Manager ui_manager;
 
         [Header("Item Effects")]
         [SerializeField] private int healthItemRestore = 300;
@@ -92,6 +86,17 @@ namespace PlayerControllers
 
         [Header("Extra Life")]
         [SerializeField] private int extraLives;
+
+        [Header("Torch")]
+        [SerializeField] private Button torchButton;
+        [SerializeField] private Image torchFill;
+        [SerializeField] private GameObject torchObject;
+
+        private float torchCharge = 1f;
+        private bool isTorchOn, isCoolingDown;
+        private bool torchLocked;
+        private Coroutine torchCoroutine;
+        private Coroutine gameOverRoutine;
 
         // TELEPORT POWERUP
         [Header("Teleport Powerup")]
@@ -154,11 +159,6 @@ namespace PlayerControllers
                 originalCameraRotation = cameraTransform.localRotation;
             }
 
-            GameObject uiObject = GameObject.Find("UI Manager");
-
-            if (uiObject != null)
-                ui_manager = uiObject.GetComponent<UI_Manager>();
-
             _defaultHeight = _cc.height;
 
             GameObject crosshairObject = GameObject.Find("CrossHair");
@@ -183,12 +183,29 @@ namespace PlayerControllers
             if (teleportVisual != null)
                 _teleportVisualOriginalScale = teleportVisual.localScale;
 
-            UpdateHealthSlider();
             UpdateTexts();
         }
 
-        #region Update
+        void Start()
+        {
+            healthSlider = GameObject.Find("Health Slider").GetComponent<Slider>();
+            movementJoystick = GameObject.Find("Floating Joystick").GetComponent<FloatingJoystick>();
+            UpdateHealthSlider();
+            ammoText = GameObject.Find("Ammo Text").GetComponent<TextMeshProUGUI>();
+            clipText = GameObject.Find("Clip Text").GetComponent<TextMeshProUGUI>();
 
+            if (torchFill != null)
+            torchFill.fillAmount = 1f;
+            
+            // Torch button
+            if (torchButton != null)
+            torchButton.onClick.AddListener(ToggleTorch);
+
+            if (torchObject != null)
+            torchObject.SetActive(false);
+        }
+
+        #region Update
         void Update()
         {
             if (isDead)
@@ -211,7 +228,6 @@ namespace PlayerControllers
             UpdateHealthSlider();
             UpdateCrosshairTarget();
         }
-
         #endregion
 
         public void HandleViewToggle()
@@ -294,7 +310,7 @@ namespace PlayerControllers
                 Cursor.visible = true;
             }
 
-            if (ui_manager != null && ui_manager.isUIMode)
+            if (UI_Manager.Instance.isUIMode)
                 return;
 
             if (Cursor.lockState != CursorLockMode.Locked &&
@@ -403,8 +419,7 @@ namespace PlayerControllers
             if (animator != null)
                 animator.SetTrigger("Jump");
 
-            if (sfxSource != null && jumpClip != null)
-                sfxSource.PlayOneShot(jumpClip, 0.55f);
+            SoundManager.Instance.PlayJumpSound();
         }
 
         void UpdateCameraView()
@@ -474,8 +489,7 @@ namespace PlayerControllers
             // No ammo in the current clip
             if (clipCount <= 0)
             {
-                if (sfxSource != null && emptyClip != null)
-                    sfxSource.PlayOneShot(emptyClip);
+                SoundManager.Instance.PlayEmptyClipSound();
 
                 // No spare ammo either
                 if (ammoCount <= 0)
@@ -489,8 +503,7 @@ namespace PlayerControllers
             }
 
             // Shoot
-            if (sfxSource != null && shootClip != null)
-                sfxSource.PlayOneShot(shootClip);
+            SoundManager.Instance.PlayShootSound();
 
             if (noozleFlash != null)
                 noozleFlash.Play();
@@ -574,9 +587,7 @@ namespace PlayerControllers
             if (health <= 80 && !criticalShown)
             {
                 criticalShown = true;
-
-                if (ui_manager != null)
-                    ui_manager.ShowCritical();
+                UI_Manager.Instance.ShowCritical();
             }
 
             if (health <= 0)
@@ -596,11 +607,10 @@ namespace PlayerControllers
 
         public void Die()
         {
+            UI_Manager.Instance.PlayGameOverSequence();
+
             if (GameManager.Instance != null)
                 GameManager.Instance.GameOver();
-
-            if (ui_manager != null)
-                ui_manager.PlayGameOverSequence();
 
             if (animator != null)
                 animator.SetTrigger("Die");
@@ -625,8 +635,7 @@ namespace PlayerControllers
             if (animator != null)
                 animator.SetTrigger("Reloading");
 
-            if (sfxSource != null && reloadClip != null)
-                sfxSource.PlayOneShot(reloadClip, 0.65f);
+            SoundManager.Instance.PlayReloadSound();
 
             yield return new WaitForSeconds(1.10f);
 
@@ -649,130 +658,35 @@ namespace PlayerControllers
 
         public void RestartGame()
         {
+            Time.timeScale = 1f;
             SceneManager.LoadScene("Game Scene");
         }
 
-        // -- RESTART GAME
-        public void RestartAfterPause()
+        public void LoadUIScene()
         {
-            if (ui_manager != null)
-            {
-                ui_manager.RestartGame();
-            }
-            else
-            {
-                ResetVariables();
-            }
+            UI_Manager.Instance.LoadUIScene();
         }
 
-        // -- RESET PLAYER
-        public void ResetVariables()
+        public void LoadSettings()
         {
-            // STOP ACTIVE PLAYER COROUTINES
-            StopAllCoroutines();
+            UI_Manager.Instance.OpenSettings();
+        }
 
+        // Pause Game
+        public void PauseGame()
+        {
+            Time.timeScale = 0f;
+        }
 
-            // RESET CHARACTER CONTROLLER
-            if (_cc != null)
-                _cc.enabled = false;
+        // Resume Game
+        public void ResumeGame()
+        {
+            Time.timeScale = 1f;
+        }
 
-            transform.SetPositionAndRotation(
-                originalPlayerPosition,
-                originalPlayerRotation
-            );
-
-            if (_cc != null)
-            {
-                _cc.height = _defaultHeight;
-                _cc.center = originalCharacterCenter;
-                _cc.enabled = true;
-            }
-
-            // RESET MOVEMENT
-            _verticalVelocity = 0f;
-            _cameraPitch = 0f;
-            _bobTimer = 0f;
-            _isCrouching = false;
-
-            // RESET CAMERA
-            isThirdPerson = originalThirdPersonMode;
-
-            if (cameraTransform != null)
-            {
-                cameraTransform.localPosition = originalCameraPosition;
-                cameraTransform.localRotation = originalCameraRotation;
-            }
-
-            // RESET HEALTH AND AMMO
-            health = defaultHealth;
-
-            ammoCount = originalAmmoCount;
-            clipCount = originalClipCount;
-
-            isDead = false;
-            criticalShown = false;
-
-            canShoot = true;
-            isReloading = false;
-            ammoExhausted = false;
-
-            // RESET TELEPORT
-            isTeleporting = false;
-            _teleportOnCooldown = false;
-            canTeleport = true;
-
-            if (teleportVisual != null)
-                teleportVisual.localScale = _teleportVisualOriginalScale;
-
-            // RESET PARTICLES
-            if (noozleFlash != null)
-            {
-                noozleFlash.Stop(
-                    true,
-                    ParticleSystemStopBehavior.StopEmittingAndClear
-                );
-            }
-
-            if (healingFx != null)
-            {
-                healingFx.Stop(
-                    true,
-                    ParticleSystemStopBehavior.StopEmittingAndClear
-                );
-            }
-
-            if (teleportOutFX != null)
-                teleportOutFX.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-
-            if (teleportInFX != null)
-                teleportInFX.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-
-            // RESET ANIMATOR
-            if (animator != null)
-            {
-                animator.ResetTrigger("Die");
-                animator.ResetTrigger("Reloading");
-                animator.ResetTrigger("Shoot");
-                animator.ResetTrigger("Jump");
-                animator.ResetTrigger("Teleport");
-
-                animator.SetBool("Crouching", false);
-                animator.SetFloat("Speed", 0f);
-                animator.SetFloat("Strafe", 0f);
-
-                animator.SetTrigger("Idle");
-            }
-
-            // RESET UI
-            UpdateHealthSlider();
-            UpdateTexts();
-
-            if (ch_controller != null)
-                ch_controller.SetEnemyTarget(false);
-
-            // RESTORE CURSOR
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+        public void PlayClickSound()
+        {
+            SoundManager.Instance.PlayCkickSound();
         }
 
         #endregion
@@ -788,12 +702,8 @@ namespace PlayerControllers
                 if (healingFx != null)
                     healingFx.Play();
 
-                if (sfxSource != null && reviveClip != null)
-                    sfxSource.PlayOneShot(reviveClip, 0.65f);
-
-                // BIG SAVE NOTIFICATION
-                if (ui_manager != null)
-                    ui_manager.ShowBigSave();
+                SoundManager.Instance.PlayReviveSound();
+                UI_Manager.Instance.ShowBigSave();
 
                 UpdateHealthSlider();
             }
@@ -805,7 +715,7 @@ namespace PlayerControllers
             if (!CanActivateTeleport())
                 return;
 
-            if (ui_manager != null && !ui_manager.CanUseTeleport())
+            if (UI_Manager.Instance != null && !UI_Manager.Instance.CanUseTeleport())
                 return;
 
             StartCoroutine(Teleport(true));
@@ -849,15 +759,12 @@ namespace PlayerControllers
             }
 
             // CONSUME TELEPORT CHARGE
-            if (consumeUICharge && ui_manager != null)
-                ui_manager.ConsumeTeleportCharge();
+            if (consumeUICharge && UI_Manager.Instance != null)
+                UI_Manager.Instance.ConsumeTeleportCharge();
 
             // Play teleport out effects
             if (teleportOutFX != null)
                 teleportOutFX.Play();
-
-            if (teleportClip != null && sfxSource != null)
-                sfxSource.PlayOneShot(teleportClip);
 
             animator.ResetTrigger("Die");
             animator.ResetTrigger("Reloading");
@@ -943,6 +850,76 @@ namespace PlayerControllers
             _teleportOnCooldown = false;
         }
 
+            
+        // Torch
+        public void ToggleTorch()
+        {
+            if(isCoolingDown) return;
+
+            if (isTorchOn)
+            {
+                StopCoroutine(torchCoroutine);
+                torchCoroutine = null;
+                torchObject.SetActive(false);
+                isTorchOn = false;
+                UI_Manager.Instance.ShowNotification(UI_Manager.Instance.torchOffCanvas, UI_Manager.Instance.notificationStayDuration);
+
+                StartCoroutine(RefillRoutine());
+            }
+            else
+            {
+                torchCoroutine = StartCoroutine(TorchRoutine());
+            }
+        }
+
+        IEnumerator TorchRoutine()
+        {
+            isTorchOn = true;
+            torchObject.SetActive(true);
+            UI_Manager.Instance.ShowNotification(UI_Manager.Instance.torchOnCanvas, UI_Manager.Instance.notificationStayDuration * 1.5f);
+            UI_Manager.Instance.FadeTorchSlider(true);
+            float timer = UI_Manager.Instance.torchDuration;
+
+            while(timer > 0f)
+            {
+                timer -= Time.deltaTime;
+                float progress = Mathf.Clamp01(timer/UI_Manager.Instance.torchDuration);
+                UI_Manager.Instance.torchSlider.value = progress;
+                torchFill.fillAmount = progress;
+
+                yield return null;
+            }
+
+            torchObject.SetActive(false);
+            isTorchOn = false;
+            torchCoroutine = null;
+            StartCoroutine(RefillRoutine());
+        }
+
+        IEnumerator RefillRoutine()
+        {
+            isCoolingDown = true;
+            torchButton.interactable = false;
+            UI_Manager.Instance.FadeTorchSlider(false);
+
+            float timer = 0f;
+            while (timer < UI_Manager.Instance.torchRefillDuration)
+            {
+                timer += Time.deltaTime;
+                float progress = Mathf.Clamp01(timer/UI_Manager.Instance.torchRefillDuration);
+                UI_Manager.Instance.torchSlider.value = progress;
+                torchFill.fillAmount = progress;
+
+                yield return null;
+            }
+
+            UI_Manager.Instance.ShowNotification(UI_Manager.Instance.torchReady, UI_Manager.Instance.notificationStayDuration * 1.5f);
+            UI_Manager.Instance.torchSlider.value = 1f;
+            torchFill.fillAmount = 1f;
+            torchButton.interactable = true;
+            isCoolingDown = false;
+        }
+
         #region Items Usage
 
         // Use health item
@@ -965,14 +942,13 @@ namespace PlayerControllers
             if (healingFx != null)
                 healingFx.Play();
 
-            if (sfxSource != null && reviveClip != null)
-                sfxSource.PlayOneShot(reviveClip, 0.65f);
+            SoundManager.Instance.PlayReviveSound();
 
             UpdateHealthSlider();
 
             // BIG SAVE NOTIFICATION
-            if (ui_manager != null)
-                    ui_manager.ShowBigSave();
+            if (UI_Manager.Instance != null)
+                    UI_Manager.Instance.ShowBigSave();
         }
 
         // Use teleport item
@@ -981,10 +957,10 @@ namespace PlayerControllers
             if (isDead || isTeleporting)
                 return;
 
-            if (StoreManager.Instance == null || ui_manager == null)
+            if (StoreManager.Instance == null || UI_Manager.Instance == null)
                 return;
 
-            if (!ui_manager.CanReceiveTeleportCharge())
+            if (!UI_Manager.Instance.CanReceiveTeleportCharge())
                 return;
 
             // Consume the store item
@@ -992,7 +968,7 @@ namespace PlayerControllers
                 return;
 
             // Add teleport charge
-            ui_manager.AddTeleportCharge();
+            UI_Manager.Instance.AddTeleportCharge();
         }
 
         // Use extra life

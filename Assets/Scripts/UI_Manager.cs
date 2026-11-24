@@ -5,9 +5,12 @@ using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 using PlayerControllers;
+using UnityEngine.SceneManagement;
 
 public class UI_Manager : MonoBehaviour
 {
+    public static UI_Manager Instance;
+
     [Header("Screens")]
     [SerializeField] private CanvasGroup splashCanvas;
     [SerializeField] private CanvasGroup loadingCanvas;
@@ -62,8 +65,10 @@ public class UI_Manager : MonoBehaviour
     private float fxVolume = 1f;
 
     private bool isTransitioning;
-
     private bool sequenceStarted;
+    private bool hasStarted;
+
+    private Coroutine introRoutine;
     public bool isUIMode;
     public GameObject blackBg;
 
@@ -75,8 +80,8 @@ public class UI_Manager : MonoBehaviour
     public CanvasGroup bigSave, alert, highScore;
 
     [SerializeField] private float notificationFadeInDuration = 0.4f;
-    [SerializeField] private float notificationStayDuration = 3.5f;
-    [SerializeField] private float notificationFadeOutDuration = 0.4f;
+    public float notificationStayDuration = 3.5f;
+    public float notificationFadeOutDuration = 0.4f;
 
     [Header("Teleport")]
     [SerializeField] private Button teleportButton;
@@ -88,18 +93,13 @@ public class UI_Manager : MonoBehaviour
     private float teleportCharge = 0f;
     private bool wasTeleportFull = true;
 
-    [Header("Torch")]
-    [SerializeField] private Button torchButton;
-    [SerializeField] private Image torchFill;
-    [SerializeField] private GameObject torchObject;
+    public CanvasGroup torchSliderCanvas, torchOnCanvas, torchOffCanvas;
+    public Slider torchSlider;
+    public float torchSliderFadeDuration = 0.4f;
 
-    [SerializeField] private CanvasGroup torchSliderCanvas, torchOnCanvas, torchOffCanvas;
-    [SerializeField] private Slider torchSlider;
-    [SerializeField] private float torchSliderFadeDuration = 0.4f;
-
-    [SerializeField] private float torchDrainDuration = 20f;
-    [SerializeField] private float torchRefillDuration = 10f;
-    [SerializeField] private float torchDuration = 6f;
+    public float torchDrainDuration = 20f;
+    public float torchRefillDuration = 10f;
+    public float torchDuration = 6f;
 
     private float torchCharge = 1f;
     private bool isTorchOn, isCoolingDown;
@@ -108,6 +108,132 @@ public class UI_Manager : MonoBehaviour
     private Coroutine gameOverRoutine;
 
     private FPP_PlayerController playerController;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    // Handles the UI scene being loaded again
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (!hasStarted)
+            return;
+
+        if (scene.name == "UI Scene")
+        {
+            RestartIntroSequence();
+        }
+    }
+
+    // Restarts the UI intro sequence
+    private void RestartIntroSequence()
+    {
+        if (introRoutine != null)
+        {
+            StopCoroutine(introRoutine);
+            introRoutine = null;
+        }
+
+        // Stop existing canvas animations
+        if (splashCanvas != null) splashCanvas.DOKill();
+        if (loadingCanvas != null) loadingCanvas.DOKill();
+        if (mainMenuCanvas != null) mainMenuCanvas.DOKill();
+        if (settingsMenuCanvas != null) settingsMenuCanvas.DOKill();
+        if (storeCanvas != null) storeCanvas.DOKill();
+        if (GameOverCanvasI != null) GameOverCanvasI.DOKill();
+        if (GameOverCanvasII != null) GameOverCanvasII.DOKill();
+        if (settingsButton != null) settingsButton.DOKill();
+
+        sequenceStarted = false;
+        isTransitioning = false;
+        isUIMode = true;
+
+        Time.timeScale = 1f;
+
+        // Stop the game over sequence if it is running
+        if (gameOverRoutine != null)
+        {
+            StopCoroutine(gameOverRoutine);
+            gameOverRoutine = null;
+        }
+
+        // Reset all screen canvases
+        SetCanvas(splashCanvas, 1f, true);
+        SetCanvas(loadingCanvas, 0f, false);
+        SetCanvas(mainMenuCanvas, 0f, false);
+        SetCanvas(settingsMenuCanvas, 0f, false);
+        SetCanvas(storeCanvas, 0f, false);
+        SetCanvas(GameOverCanvasI, 0f, false);
+        SetCanvas(GameOverCanvasII, 0f, false);
+
+        // Reset the settings button
+        if (settingsButton != null)
+        {
+            settingsButton.alpha = 0f;
+            settingsButton.interactable = false;
+            settingsButton.blocksRaycasts = false;
+            settingsButton.gameObject.SetActive(false);
+        }
+
+        // Reset the menu buttons
+        if (menuButtons != null)
+        {
+            foreach (RectTransform button in menuButtons)
+            {
+                if (button == null)
+                    continue;
+
+                button.DOKill();
+                button.gameObject.SetActive(false);
+            }
+        }
+
+        // Reset the loading progress
+        if (progressBar != null)
+            progressBar.value = 0f;
+
+        if (progressText != null)
+            progressText.text = "0%";
+
+        // Reset the background
+        if (blackBg != null)
+            blackBg.SetActive(true);
+
+        // Reset notifications
+        InitializeNotification(critical);
+        InitializeNotification(doubleKill);
+        InitializeNotification(incoming);
+        InitializeNotification(tapToTeleport);
+        InitializeNotification(teleportFull);
+        InitializeNotification(bigSave);
+        InitializeNotification(alert);
+        InitializeNotification(highScore);
+        InitializeNotification(torchSliderCanvas);
+        InitializeNotification(torchOnCanvas);
+        InitializeNotification(torchOffCanvas);
+        InitializeNotification(torchReady);
+
+        // Start the intro sequence again
+        introRoutine = StartCoroutine(PlayIntroSequence());
+    }
 
     private void Start()
     {
@@ -148,6 +274,7 @@ public class UI_Manager : MonoBehaviour
         InitializeNotification(highScore);
         InitializeNotification(torchSliderCanvas);
         InitializeNotification(torchOnCanvas);
+        InitializeNotification(torchOffCanvas);
         InitializeNotification(torchReady);
 
         // Find player reference.
@@ -158,18 +285,8 @@ public class UI_Manager : MonoBehaviour
         if (teleportButton != null)
             teleportButton.onClick.AddListener(UseTeleport);
 
-        if (torchObject != null)
-            torchObject.SetActive(false);
-
         if (torchSlider != null)
             torchSlider.value = 1f;
-
-        if (torchFill != null)
-            torchFill.fillAmount = 1f;
-            
-        // Torch button
-        if (torchButton != null)
-            torchButton.onClick.AddListener(ToggleTorch);
 
         // Audio settings
         LoadAudioSettings();
@@ -190,7 +307,8 @@ public class UI_Manager : MonoBehaviour
 
         UpdateTeleportUI();
 
-        StartCoroutine(PlayIntroSequence());
+        hasStarted = true;
+        RestartIntroSequence();
     }
 
     private void Update()
@@ -288,9 +406,10 @@ public class UI_Manager : MonoBehaviour
     {
         ShowNotification(highScore, notificationStayDuration);
     }
+
     #endregion
 
-   // TELEPORT
+    // TELEPORT
 
     public bool CanUseTeleport()
     {
@@ -351,119 +470,57 @@ public class UI_Manager : MonoBehaviour
         return teleportCharge;
     }
 
-
-    // TORCH
-    public void ToggleTorch()
-    {
-        if(isCoolingDown) return;
-
-        if (isTorchOn)
-        {
-            StopCoroutine(torchCoroutine);
-            torchCoroutine = null;
-            torchObject.SetActive(false);
-            isTorchOn = false;
-            ShowNotification(torchOffCanvas, notificationStayDuration);
-
-            StartCoroutine(RefillRoutine());
-        }
-        else
-        {
-            torchCoroutine = StartCoroutine(TorchRoutine());
-        }
-    }
-
-    IEnumerator TorchRoutine()
-    {
-        isTorchOn = true;
-        torchObject.SetActive(true);
-        ShowNotification(torchOnCanvas, notificationStayDuration * 1.5f);
-        FadeTorchSlider(true);
-        float timer = torchDuration;
-
-        while(timer > 0f)
-        {
-            timer -= Time.deltaTime;
-            float progress = Mathf.Clamp01(timer/torchDuration);
-            torchSlider.value = progress;
-            torchFill.fillAmount = progress;
-
-            yield return null;
-        }
-
-        torchObject.SetActive(false);
-        isTorchOn = false;
-        torchCoroutine = null;
-        StartCoroutine(RefillRoutine());
-    }
-
-    IEnumerator RefillRoutine()
-    {
-        isCoolingDown = true;
-        torchButton.interactable = false;
-        FadeTorchSlider(false);
-
-        float timer = 0f;
-        while (timer < torchRefillDuration)
-        {
-            timer += Time.deltaTime;
-            float progress = Mathf.Clamp01(timer/torchRefillDuration);
-            torchSlider.value = progress;
-            torchFill.fillAmount = progress;
-
-            yield return null;
-        }
-
-        ShowNotification(torchReady, notificationStayDuration * 1.5f);
-        torchSlider.value = 1f;
-        torchFill.fillAmount = 1f;
-        torchButton.interactable = true;
-        isCoolingDown = false;
-    }
-
-    private void FadeTorchSlider(bool show)
+    public void FadeTorchSlider(bool show)
     {
         if (torchSliderCanvas == null)
             return;
 
+        if (torchOnCanvas != null)
+            torchOnCanvas.DOKill();
+
         torchSliderCanvas.DOKill();
-        torchOnCanvas.DOKill();
 
         if (show)
         {
             torchSliderCanvas.gameObject.SetActive(true);
-            torchOnCanvas.gameObject.SetActive(true);
+
+            if (torchOnCanvas != null)
+                torchOnCanvas.gameObject.SetActive(true);
 
             torchSliderCanvas.DOFade(1f, torchSliderFadeDuration)
                 .SetEase(Ease.OutSine).SetUpdate(true);
 
-            torchOnCanvas.DOFade(1f, torchSliderFadeDuration)
-                .SetEase(Ease.OutSine).SetUpdate(true);
+            if (torchOnCanvas != null)
+            {
+                torchOnCanvas.DOFade(1f, torchSliderFadeDuration)
+                    .SetEase(Ease.OutSine).SetUpdate(true);
+            }
         }
         else
         {
-            torchOnCanvas.DOFade(0f, torchSliderFadeDuration)
-                .SetEase(Ease.InSine).SetUpdate(true);
+            if (torchOnCanvas != null)
+            {
+                torchOnCanvas.DOFade(0f, torchSliderFadeDuration)
+                    .SetEase(Ease.InSine).SetUpdate(true);
+            }
 
             torchSliderCanvas.DOFade(0f, torchSliderFadeDuration)
                 .SetEase(Ease.InSine).SetUpdate(true)
                 .OnComplete(() =>
                 {
                     torchSliderCanvas.gameObject.SetActive(false);
-                    torchOnCanvas.gameObject.SetActive(false);
+
+                    if (torchOnCanvas != null)
+                        torchOnCanvas.gameObject.SetActive(false);
                 });
         }
     }
-
 
     #region Button functions
 
     // SETTINGS MENU
     public void OpenSettings()
     {
-        // Restore the time scale
-        Time.timeScale = 1f;
-
         if (isTransitioning || settingsMenuCanvas == null || mainMenuCanvas == null)
             return;
 
@@ -480,8 +537,7 @@ public class UI_Manager : MonoBehaviour
         settingsMenuCanvas.blocksRaycasts = false;
 
         yield return settingsMenuCanvas.DOFade(1f, screenFadeDuration)
-            .SetEase(Ease.InOutSine)
-            .WaitForCompletion();
+            .SetEase(Ease.InOutSine).SetUpdate(true).WaitForCompletion();
 
         settingsMenuCanvas.interactable = true;
         settingsMenuCanvas.blocksRaycasts = true;
@@ -505,8 +561,7 @@ public class UI_Manager : MonoBehaviour
         settingsMenuCanvas.blocksRaycasts = false;
 
         yield return settingsMenuCanvas.DOFade(0f, screenFadeDuration)
-            .SetEase(Ease.InOutSine)
-            .WaitForCompletion();
+            .SetEase(Ease.InOutSine).SetUpdate(true).WaitForCompletion();
 
         settingsMenuCanvas.gameObject.SetActive(false);
         isTransitioning = false;
@@ -524,7 +579,8 @@ public class UI_Manager : MonoBehaviour
 
     private IEnumerator FadeToStore()
     {
-        StoreManager.Instance.LoadStoreButtonStates();
+        if (StoreManager.Instance != null)
+            StoreManager.Instance.LoadStoreButtonStates();
 
         isTransitioning = true;
 
@@ -600,7 +656,8 @@ public class UI_Manager : MonoBehaviour
         if (musicSource != null)
             musicSource.volume = musicVolume;
 
-        musicSliderPerc.text = Mathf.RoundToInt(value * 100f) + "%";
+        if (musicSliderPerc != null)
+            musicSliderPerc.text = Mathf.RoundToInt(value * 100f) + "%";
     }
 
     public void SetFXVolume(float value)
@@ -616,7 +673,8 @@ public class UI_Manager : MonoBehaviour
                 source.volume = fxVolume;
         }
 
-        fxSliderPerc.text = Mathf.RoundToInt(value * 100f) + "%";
+        if (fxSliderPerc != null)
+            fxSliderPerc.text = Mathf.RoundToInt(value * 100f) + "%";
     }
 
     private void ApplyAudioSettings()
@@ -639,8 +697,7 @@ public class UI_Manager : MonoBehaviour
         fxVolume = PlayerPrefs.GetFloat(FX_VOLUME_KEY, 1f);
     }
 
-    // INTRO SEQUENCE
-
+    // Intro sequence
     private IEnumerator PlayIntroSequence()
     {
         if (sequenceStarted)
@@ -712,6 +769,8 @@ public class UI_Manager : MonoBehaviour
             settingsButton.interactable = true;
             settingsButton.blocksRaycasts = true;
         }
+
+        introRoutine = null;
     }
 
     private IEnumerator AnimateLoadingSlider()
@@ -765,7 +824,6 @@ public class UI_Manager : MonoBehaviour
     {
         // Restore the time scale
         Time.timeScale = 1f;
-
         StartCoroutine(LoadingToMainMenu());
     }
 
@@ -848,19 +906,9 @@ public class UI_Manager : MonoBehaviour
     }
 
     // START GAME
-
     public void StartGame()
     {
         StartCoroutine(FadeOutMainMenu());
-
-        if (player != null)
-            player.SetActive(true);
-
-        if (spawner != null)
-            spawner.SetActive(true);
-
-        if (GameManager.Instance != null)
-            GameManager.Instance.StartGame();
     }
 
     private IEnumerator FadeOutMainMenu()
@@ -879,114 +927,18 @@ public class UI_Manager : MonoBehaviour
         mainMenuCanvas.alpha = 0f;
         mainMenuCanvas.interactable = false;
         mainMenuCanvas.blocksRaycasts = false;
+
+        SceneManager.LoadScene("Game Scene");
     }
 
-    // Pause Game
-    public void PauseGame()
-    {
-        Time.timeScale = 0f;
-    }
-
-    // Resume Game
-    public void ResumeGame()
+    // --
+    public void LoadUIScene()
     {
         Time.timeScale = 1f;
+        SceneManager.LoadScene("UI Scene");
     }
 
-    // Restart Game
-    public void RestartGame()
-    {
-        Time.timeScale = 1f;
-        isTransitioning = false;
-
-        // Stop game over sequence
-        if (gameOverRoutine != null)
-        {
-            StopCoroutine(gameOverRoutine);
-            gameOverRoutine = null;
-        }
-
-        // Stop game over animations
-        if (GameOverCanvasI != null)
-            GameOverCanvasI.DOKill();
-
-        if (GameOverCanvasII != null)
-            GameOverCanvasII.DOKill();
-
-        // Reset game oer screens
-        ResetCanvasGroup(GameOverCanvasI);
-        ResetCanvasGroup(GameOverCanvasII);
-
-        // Reset notifications
-        InitializeNotification(critical);
-        InitializeNotification(doubleKill);
-        InitializeNotification(incoming);
-        InitializeNotification(tapToTeleport);
-        InitializeNotification(teleportFull);
-        InitializeNotification(bigSave);
-        InitializeNotification(alert);
-        InitializeNotification(highScore);
-
-        // Reset teleport charge
-        teleportCharge = 1f;
-        wasTeleportFull = true;
-
-        UpdateTeleportUI();
-
-        // Reset torch
-        isTorchOn = false;
-        torchLocked = false;
-        torchCharge = 1f;
-
-        if (torchObject != null)
-            torchObject.SetActive(false);
-
-        if (torchSliderCanvas != null)
-        {
-            torchSliderCanvas.DOKill();
-            torchSliderCanvas.alpha = 0f;
-            torchSliderCanvas.interactable = false;
-            torchSliderCanvas.blocksRaycasts = false;
-            torchSliderCanvas.gameObject.SetActive(false);
-        }
-
-        // Restore player
-        if (player != null)
-        {
-            player.SetActive(true);
-
-            playerController =
-                player.GetComponent<FPP_PlayerController>();
-
-            if (playerController != null)
-                playerController.ResetVariables();
-        }
-
-        // Reset spawner and return objects to pool
-        if (spawner != null)
-        {
-            spawner.SetActive(true);
-
-            InfinitySpawner infinitySpawner =
-                spawner.GetComponent<InfinitySpawner>();
-
-            if (infinitySpawner != null)
-                infinitySpawner.RestartSpawner();
-        }
-
-        if (GameManager.Instance != null)
-            GameManager.Instance.StartGame();
-
-        if (blackBg != null)
-            blackBg.SetActive(false);
-
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        Debug.Log("Game Restarted!");
-    }
-
-    // -Reset canvas groups
+    // Reset canvas groups
     private void ResetCanvasGroup(CanvasGroup canvas)
     {
         if (canvas == null)
@@ -1046,12 +998,16 @@ public class UI_Manager : MonoBehaviour
 
     private void OnDestroy()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+
         DOTween.Kill(splashCanvas);
         DOTween.Kill(loadingCanvas);
         DOTween.Kill(mainMenuCanvas);
         DOTween.Kill(settingsButton);
         DOTween.Kill(settingsMenuCanvas);
         DOTween.Kill(storeCanvas);
+        DOTween.Kill(GameOverCanvasI);
+        DOTween.Kill(GameOverCanvasII);
 
         if (menuButtons != null)
         {
@@ -1071,8 +1027,13 @@ public class UI_Manager : MonoBehaviour
         DOTween.Kill(alert);
         DOTween.Kill(highScore);
         DOTween.Kill(torchSliderCanvas);
-        DOTween.Kill(GameOverCanvasI);
-        DOTween.Kill(GameOverCanvasII);
+        DOTween.Kill(torchOnCanvas);
+        DOTween.Kill(torchOffCanvas);
+        DOTween.Kill(torchReady);
+
+        if (Instance == this)
+            Instance = null;
     }
+
     #endregion
 }
