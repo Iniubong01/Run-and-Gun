@@ -11992,6 +11992,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Subway tunnel + env
       objectReference: {fileID: 0}
+    - target: {fileID: 5360920978125377670, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8326106570120013450, guid: 4ddb0b25e82df1a479b6265683090ee3, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -51085,6 +51089,18 @@ MonoBehaviour:
   groundCheckDistance: 10
   minimumPlayerDistance: 10
   player: {fileID: 2002817541}
+  characters:
+  - characterObjects:
+    - {fileID: 708287492}
+    - {fileID: 1694790778}
+  - characterObjects:
+    - {fileID: 1779389180}
+    - {fileID: 420317257}
+  guns:
+  - gunObjects:
+    - {fileID: 67509286}
+  - gunObjects:
+    - {fileID: 425531889}
   spawnDistanceFromPlayer: 12
   spawnDistanceVariation: 6
   minZ: -12
@@ -93233,7 +93249,7 @@ MonoBehaviour:
   maxLookAngle: 30
   invertMouseY: 0
   isThirdPerson: 0
-  tppOffset: {x: 1.7, y: 1.7, z: -2.83}
+  tppOffset: {x: 1.7, y: 0.55, z: -2.83}
   viewToggleKey: 118
   hideModelInFPP: 1
   headBobEnabled: 1

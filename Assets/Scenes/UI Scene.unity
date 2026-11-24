@@ -3663,7 +3663,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: USE
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 9093febf5d0246a4cbd8def408f193f9, type: 2}
   m_sharedMaterial: {fileID: 3871465604904362290, guid: 9093febf5d0246a4cbd8def408f193f9, type: 2}
@@ -9555,7 +9555,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &458517502
 RectTransform:
   m_ObjectHideFlags: 0
@@ -22283,7 +22283,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &996513725
 RectTransform:
   m_ObjectHideFlags: 0
@@ -24031,7 +24031,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 000
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 9093febf5d0246a4cbd8def408f193f9, type: 2}
   m_sharedMaterial: {fileID: 3871465604904362290, guid: 9093febf5d0246a4cbd8def408f193f9, type: 2}
@@ -37887,7 +37887,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: USE
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 9093febf5d0246a4cbd8def408f193f9, type: 2}
   m_sharedMaterial: {fileID: 3871465604904362290, guid: 9093febf5d0246a4cbd8def408f193f9, type: 2}
@@ -41730,7 +41730,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 00
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 9093febf5d0246a4cbd8def408f193f9, type: 2}
   m_sharedMaterial: {fileID: 3871465604904362290, guid: 9093febf5d0246a4cbd8def408f193f9, type: 2}
@@ -46046,7 +46046,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 00
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 9093febf5d0246a4cbd8def408f193f9, type: 2}
   m_sharedMaterial: {fileID: 3871465604904362290, guid: 9093febf5d0246a4cbd8def408f193f9, type: 2}
