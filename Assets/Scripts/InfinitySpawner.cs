@@ -7,6 +7,18 @@ using DG.Tweening;
 using PlayerControllers;
 using TMPro;
 
+[System.Serializable]
+public class CharacterEquipment
+{
+    public GameObject[] characterObjects;
+}
+
+[System.Serializable]
+public class GunEquipment
+{
+    public GameObject[] gunObjects;
+}
+
 public class InfinitySpawner : MonoBehaviour
 {
     // TIER CONFIGURATION
@@ -42,6 +54,15 @@ public class InfinitySpawner : MonoBehaviour
 
     [Header("Player")]
     public Transform player;
+
+    [Header("Character Equipment")]
+    [SerializeField] private CharacterEquipment[] characters;
+
+    [Header("Gun Equipment")]
+    [SerializeField] private GunEquipment[] guns;
+
+    private const string CHARACTER_KEY = "EquippedCharacter";
+    private const string GUN_KEY = "EquippedGun";
 
     // PLAYER SPAWN DISTANCE
     [Header("Player Spawn Distance")]
@@ -138,7 +159,7 @@ public class InfinitySpawner : MonoBehaviour
     [SerializeField] private TextMeshProUGUI extraLifeQuantityText;
     [SerializeField] private TextMeshProUGUI teleportQuantityText;
 
-    // OBJECT POOLING
+    // Object pooling
     private class PooledObjectInfo
     {
         public GameObject prefab;
@@ -151,9 +172,10 @@ public class InfinitySpawner : MonoBehaviour
     private readonly Dictionary<GameObject, PooledObjectInfo> activeObjects =
         new Dictionary<GameObject, PooledObjectInfo>();
 
-    // Initialization
     private void Start()
     {
+        LoadEquippedItems();
+
         StartCoroutine(PlayIntroSequence());
         FindPlayer();
         InitializeSpawner();
@@ -233,6 +255,94 @@ public class InfinitySpawner : MonoBehaviour
         explosiveSpawnRoutine = StartCoroutine(ExplosiveSpawner());
 
         Debug.Log("Endless Spawner Initialized!");
+    }
+
+    // Loads the equipped character and gun
+private void LoadEquippedItems()
+{
+    int selectedCharacter = PlayerPrefs.GetInt(CHARACTER_KEY, 0);
+    int selectedGun = PlayerPrefs.GetInt(GUN_KEY, 0);
+
+    ActivateCharacter(selectedCharacter);
+    ActivateGun(selectedGun);
+}
+
+// Activates the selected character
+private void ActivateCharacter(int index)
+{
+    if (characters == null || characters.Length == 0)
+        return;
+
+    // Deactivates all character objects
+    foreach (CharacterEquipment character in characters)
+    {
+        if (character == null || character.characterObjects == null)
+            continue;
+
+        foreach (GameObject obj in character.characterObjects)
+        {
+            if (obj != null)
+                obj.SetActive(false);
+        }
+    }
+
+    // Checks the selected character index
+    if (index < 0 || index >= characters.Length)
+    {
+        Debug.LogWarning("Selected character index is invalid: " + index);
+        return;
+    }
+
+    CharacterEquipment selected = characters[index];
+
+    if (selected == null || selected.characterObjects == null)
+        return;
+
+    // Activates the selected character objects
+    foreach (GameObject obj in selected.characterObjects)
+    {
+        if (obj != null)
+            obj.SetActive(true);
+    }
+}
+
+    // Activates the selected gun
+    private void ActivateGun(int index)
+    {
+        if (guns == null || guns.Length == 0)
+            return;
+
+        // Deactivates all gun objects
+        foreach (GunEquipment gun in guns)
+        {
+            if (gun == null || gun.gunObjects == null)
+                continue;
+
+            foreach (GameObject obj in gun.gunObjects)
+            {
+                if (obj != null)
+                    obj.SetActive(false);
+            }
+        }
+
+        // Checks the selected gun index
+        if (index < 0 || index >= guns.Length)
+        {
+            Debug.LogWarning("Selected gun index is invalid: " + index);
+            return;
+        }
+
+        GunEquipment selected = guns[index];
+
+        if (selected == null || selected.gunObjects == null)
+            return;
+
+        // Activates the selected gun objects
+        foreach (GameObject obj in selected.gunObjects)
+        {
+            if (obj != null)
+                obj.SetActive(true);
+        }
     }
 
     private void Update()

@@ -275,26 +275,11 @@ public class StoreManager : MonoBehaviour
         }
     }
 
-    // Refreshes an upgrade button
-    public void RefreshButton(PlayerSkin upgrade)
+    // Updates the purchase button
+    private void RefreshButton(PlayerSkin upgrade)
     {
         if (upgrade == null)
             return;
-
-        PlayerSkin[] upgrades = GetUpgradeArray(upgrade.Category);
-        int selectedIndex = GetSelectedIndex(upgrade.Category);
-
-        if (upgrades == null || upgrades.Length == 0)
-        {
-            upgrade.UpdateLockUI();
-            return;
-        }
-
-        selectedIndex = Mathf.Clamp(selectedIndex, 0, upgrades.Length - 1);
-
-        bool isSelected = upgrades[selectedIndex];
-
-        upgrade.UpdateDisplay(isSelected);
 
         LoadUpgradeState(upgrade);
     }
@@ -527,9 +512,6 @@ public class StoreManager : MonoBehaviour
         bool deployed = owned && equippedIndex == currentIndex;
 
         upgrade.SetUpgradeState(owned, deployed, false);
-
-        if (deployed)
-            upgrade.SetUpgradeObjects(true);
     }
 
     // Gets the ownership preference key
