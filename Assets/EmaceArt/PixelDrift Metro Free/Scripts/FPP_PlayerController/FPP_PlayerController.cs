@@ -11,7 +11,6 @@ namespace PlayerControllers
     {
         // -- Movement
         public float walkSpeed = 3f;
-        public float runSpeed = 6f;
         public float crouchSpeed = 1.5f;
         public float gravity = -12f;
 
@@ -22,9 +21,6 @@ namespace PlayerControllers
         [Header("Mobile Movement")]
         public Joystick movementJoystick;
 
-        [Header("Crouch")]
-        public float crouchHeight = 1f;
-        public KeyCode crouchKey = KeyCode.LeftControl;
         public float crouchTransitionSpeed = 10f;
 
         [Header("View (Camera)")]
@@ -37,7 +33,6 @@ namespace PlayerControllers
         public bool isThirdPerson = false;
         public Vector3 tppOffset = new Vector3(0f, 1.8f, -3.0f);
         public KeyCode viewToggleKey = KeyCode.V;
-        public bool hideModelInFPP = true;
 
         [Header("Head Bobbing (FPP only)")]
         public bool headBobEnabled = true;
@@ -84,19 +79,14 @@ namespace PlayerControllers
         [SerializeField] private int ammoItemRestore = 1;
         [SerializeField] private int maxHealth = 100;
 
-        [Header("Extra Life")]
-        [SerializeField] private int extraLives;
 
         [Header("Torch")]
         [SerializeField] private Button torchButton;
         [SerializeField] private Image torchFill;
         [SerializeField] private GameObject torchObject;
 
-        private float torchCharge = 1f;
         private bool isTorchOn, isCoolingDown;
-        private bool torchLocked;
         private Coroutine torchCoroutine;
-        private Coroutine gameOverRoutine;
 
         // TELEPORT POWERUP
         [Header("Teleport Powerup")]
@@ -114,8 +104,6 @@ namespace PlayerControllers
         public ParticleSystem teleportOutFX;
         public ParticleSystem teleportInFX;
 
-        [Tooltip("Optional teleport sound.")]
-        public AudioClip teleportClip;
 
         [Tooltip("Layers that should block teleporting.")]
         public LayerMask teleportObstacleLayers = ~0;
@@ -123,7 +111,6 @@ namespace PlayerControllers
         public float teleportWallPadding = 0.5f;
 
         private Vector3 _teleportVisualOriginalScale;
-        private bool _teleportOnCooldown;
 
         // Original player states for pooling
         private Vector3 originalPlayerPosition;
@@ -754,7 +741,6 @@ namespace PlayerControllers
             if (Vector3.Distance(transform.position, destination) < 0.1f)
             {
                 isTeleporting = false;
-                _teleportOnCooldown = false;
                 yield break;
             }
 
@@ -846,8 +832,6 @@ namespace PlayerControllers
 
             // Cooldown
             yield return new WaitForSeconds(teleportCooldown);
-
-            _teleportOnCooldown = false;
         }
 
             

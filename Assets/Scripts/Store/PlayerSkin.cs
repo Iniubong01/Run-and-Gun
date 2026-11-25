@@ -76,12 +76,6 @@ public class PlayerSkin : MonoBehaviour, ISelectHandler, IDeselectHandler,
     {
         canvasGroup = GetComponent<CanvasGroup>();
         initiallyOwned = isDeployed;
-
-        if (useButton != null)
-        {
-            useButton.onClick.RemoveListener(OnUpgradeButtonClicked);
-            useButton.onClick.AddListener(OnUpgradeButtonClicked);
-        }
     }
 
     private void Start()
@@ -91,15 +85,6 @@ public class PlayerSkin : MonoBehaviour, ISelectHandler, IDeselectHandler,
 
     // Selects this upgrade
     private void SelectUpgrade()
-    {
-        if (StoreManager.Instance == null)
-            return;
-
-        StoreManager.Instance.SelectUpgrade(this);
-    }
-
-    // Buys or equips this upgrade
-    private void OnUpgradeButtonClicked()
     {
         if (StoreManager.Instance == null)
             return;
