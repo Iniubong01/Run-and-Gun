@@ -8,7 +8,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Game Timer")]
     [SerializeField] private TextMeshProUGUI timerText;
-    [SerializeField] private float elapsedTime;
+    public float elapsedTime;
     public bool isGameRunning;
 
     [Header("Time High Score")]
@@ -91,8 +91,6 @@ public class GameManager : MonoBehaviour
     // Start game
     public void StartGame()
     {
-        ResetGameData();
-
         isNewHighScore = false;
         isGameRunning = true;
     }

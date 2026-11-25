@@ -51123,6 +51123,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   cam: {fileID: 0}
+  timerText: {fileID: 1836276683}
+  elapsedTime: 0
   startingEnemyCount: 1
   maximumEnemyCountPerWave: 5
   enemyQuantityIncreaseInterval: 80

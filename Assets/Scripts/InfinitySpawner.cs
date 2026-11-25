@@ -103,7 +103,6 @@ public class InfinitySpawner : MonoBehaviour
     public GameObject cam;
     [Header("Game Timer")]
     [SerializeField] private TextMeshProUGUI timerText;
-    [SerializeField] private float elapsedTime;
 
     // SPAWN QUANTITIES
     [Header("Enemy Spawn Quantity")]
@@ -175,11 +174,6 @@ public class InfinitySpawner : MonoBehaviour
     private readonly Dictionary<GameObject, PooledObjectInfo> activeObjects =
         new Dictionary<GameObject, PooledObjectInfo>();
 
-    private void Awake()
-    {
-        elapsedTime = 0f;
-    }
-
     private void Start()
     {
         LoadEquippedItems();
@@ -192,9 +186,10 @@ public class InfinitySpawner : MonoBehaviour
     }
 
     #region Loading screen
-    // Intro sequence
     private IEnumerator PlayIntroSequence()
     {
+        GameManager.Instance.ResetGameData();
+
         // Show loading screen.
         if (loadingCanvas != null)
         {
@@ -225,7 +220,7 @@ public class InfinitySpawner : MonoBehaviour
             loadingCanvas.blocksRaycasts = false;
         }
         
-        GameManager.Instance.isGameRunning = true;
+        GameManager.Instance.StartGame();
     }
 
     private IEnumerator AnimateLoadingSlider()
@@ -426,9 +421,6 @@ public class InfinitySpawner : MonoBehaviour
 
         UpdateEnemyTierUnlocks();
         UpdateExplosiveTierUnlocks();
-    
-        if (GameManager.Instance.isGameRunning)
-            elapsedTime += Time.deltaTime;
 
         UpdateTimerUI();
     }
@@ -436,7 +428,7 @@ public class InfinitySpawner : MonoBehaviour
     private void UpdateTimerUI()
     {
         if (timerText != null)
-            timerText.text = GameManager.Instance.FormatTime(elapsedTime);
+            timerText.text = GameManager.Instance.FormatTime(GameManager.Instance.elapsedTime);
     }
 
     public void UpdateItemHUD()
