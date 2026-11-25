@@ -938,6 +938,11 @@ public class UI_Manager : MonoBehaviour
         SceneManager.LoadScene("UI Scene");
     }
 
+    public void LoadGameScene()
+    {
+        SceneManager.LoadScene("Game Scene");
+    }
+
     // Reset canvas groups
     private void ResetCanvasGroup(CanvasGroup canvas)
     {
@@ -983,6 +988,9 @@ public class UI_Manager : MonoBehaviour
             yield return GameOverCanvasII.DOFade(1f, fadeDuration)
                 .SetEase(Ease.InOutSine)
                 .WaitForCompletion();
+
+            GameOverCanvasII.interactable = true;
+            GameOverCanvasII.blocksRaycasts = true;
         }
 
         if (GameOverCanvasI != null)

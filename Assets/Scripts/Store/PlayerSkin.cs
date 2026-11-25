@@ -121,28 +121,21 @@ public class PlayerSkin : MonoBehaviour, ISelectHandler, IDeselectHandler,
     // Updates the upgrade display
     public void UpdateDisplay(bool selected)
     {
+        // Updates the outline
         if (outline != null)
             outline.SetActive(selected);
 
+        // Updates the display image
         if (displayImage != null)
             displayImage.SetActive(selected);
 
-        if (selected)
-        {
-            if (nameText != null)
-                nameText.text = upgradeName;
+        // Updates the upgrade name
+        if (nameText != null)
+            nameText.text = selected ? upgradeName : "";
 
-            if (descriptionText != null)
-                descriptionText.text = upgradeDescription;
-        }
-        else
-        {
-            if (nameText != null)
-                nameText.text = "";
-
-            if (descriptionText != null)
-                descriptionText.text = "";
-        }
+        // Updates the upgrade description
+        if (descriptionText != null)
+            descriptionText.text = selected ? upgradeDescription : "";
     }
 
     #endregion
