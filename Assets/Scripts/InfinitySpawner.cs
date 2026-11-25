@@ -101,6 +101,9 @@ public class InfinitySpawner : MonoBehaviour
     public LayerMask obstacleLayer;
 
     public GameObject cam;
+    [Header("Game Timer")]
+    [SerializeField] private TextMeshProUGUI timerText;
+    [SerializeField] private float elapsedTime;
 
     // SPAWN QUANTITIES
     [Header("Enemy Spawn Quantity")]
@@ -172,6 +175,11 @@ public class InfinitySpawner : MonoBehaviour
     private readonly Dictionary<GameObject, PooledObjectInfo> activeObjects =
         new Dictionary<GameObject, PooledObjectInfo>();
 
+    private void Awake()
+    {
+        elapsedTime = 0f;
+    }
+
     private void Start()
     {
         LoadEquippedItems();
@@ -180,7 +188,93 @@ public class InfinitySpawner : MonoBehaviour
         FindPlayer();
         InitializeSpawner();
         UpdateItemHUD();
+        UpdateTimerUI();
     }
+
+    #region Loading screen
+    // Intro sequence
+    private IEnumerator PlayIntroSequence()
+    {
+        // Show loading screen.
+        if (loadingCanvas != null)
+        {
+            loadingCanvas.gameObject.SetActive(true);
+            loadingCanvas.alpha = 1f;
+            loadingCanvas.interactable = true;
+            loadingCanvas.blocksRaycasts = true;
+        }
+
+        if (progressBar != null)
+            progressBar.value = 0f;
+
+        if (progressText != null)
+            progressText.text = "0%";
+
+        yield return StartCoroutine(AnimateLoadingSlider());
+
+        // Fade out loading screen.
+        if (loadingCanvas != null)
+        {
+            yield return loadingCanvas.DOFade(0f, 0.2f)
+                .SetEase(Ease.InOutSine)
+                .WaitForCompletion();
+
+            loadingCanvas.gameObject.SetActive(false);
+            loadingCanvas.alpha = 0f;
+            loadingCanvas.interactable = false;
+            loadingCanvas.blocksRaycasts = false;
+        }
+        
+        GameManager.Instance.isGameRunning = true;
+    }
+
+    private IEnumerator AnimateLoadingSlider()
+    {
+        if (progressBar == null || progressText == null)
+            yield break;
+
+        float displayedProgress = 0f;
+
+        while (displayedProgress < 1f)
+        {
+            float pauseDuration = Random.Range(0.2f, 0.35f);
+            yield return new WaitForSeconds(pauseDuration);
+
+            float segmentDuration = Random.Range(0.1f, 0.3f);
+            float segmentStart = displayedProgress;
+            float segmentEnd = Mathf.Min(1f, segmentStart + Random.Range(0.12f, 0.28f));
+
+            float elapsed = 0f;
+
+            while (elapsed < segmentDuration)
+            {
+                elapsed += Time.deltaTime;
+
+                float t = Mathf.Clamp01(elapsed / segmentDuration);
+
+                displayedProgress = Mathf.Lerp(
+                    segmentStart,
+                    segmentEnd,
+                    Mathf.SmoothStep(0f, 1f, t)
+                );
+
+                progressBar.value = displayedProgress;
+                progressText.text = Mathf.RoundToInt(displayedProgress * 100f) + "%";
+
+                yield return null;
+            }
+
+            displayedProgress = segmentEnd;
+            progressBar.value = displayedProgress;
+            progressText.text = Mathf.RoundToInt(displayedProgress * 100f) + "%";
+        }
+
+        progressBar.value = 1f;
+        progressText.text = "100%";
+
+        yield return new WaitForSeconds(0.4f);
+    }
+    #endregion
 
     private void FindPlayer()
     {
@@ -218,36 +312,14 @@ public class InfinitySpawner : MonoBehaviour
         activeExplosiveCount = 0;
 
         // Independent enemy unlock schedules
-        enemyTier2Time = Random.Range(
-            enemyTier2UnlockTime.x,
-            enemyTier2UnlockTime.y
-        );
-
-        enemyTier3Time = enemyTier2Time + Random.Range(
-            enemyTier3UnlockTime.x,
-            enemyTier3UnlockTime.y
-        );
-
-        enemyTier4Time = enemyTier3Time + Random.Range(
-            enemyTier4UnlockTime.x,
-            enemyTier4UnlockTime.y
-        );
+        enemyTier2Time = Random.Range(enemyTier2UnlockTime.x, enemyTier2UnlockTime.y);
+        enemyTier3Time = enemyTier2Time + Random.Range(enemyTier3UnlockTime.x, enemyTier3UnlockTime.y);
+        enemyTier4Time = enemyTier3Time + Random.Range(enemyTier4UnlockTime.x, enemyTier4UnlockTime.y);
 
         // Independent explosive unlock schedules
-        explosiveTier2Time = Random.Range(
-            explosiveTier2UnlockTime.x,
-            explosiveTier2UnlockTime.y
-        );
-
-        explosiveTier3Time = explosiveTier2Time + Random.Range(
-            explosiveTier3UnlockTime.x,
-            explosiveTier3UnlockTime.y
-        );
-
-        explosiveTier4Time = explosiveTier3Time + Random.Range(
-            explosiveTier4UnlockTime.x,
-            explosiveTier4UnlockTime.y
-        );
+        explosiveTier2Time = Random.Range(explosiveTier2UnlockTime.x, explosiveTier2UnlockTime.y);
+        explosiveTier3Time = explosiveTier2Time + Random.Range(explosiveTier3UnlockTime.x, explosiveTier3UnlockTime.y);
+        explosiveTier4Time = explosiveTier3Time + Random.Range(explosiveTier4UnlockTime.x, explosiveTier4UnlockTime.y);
 
         spawningEnabled = true;
 
@@ -258,53 +330,53 @@ public class InfinitySpawner : MonoBehaviour
     }
 
     // Loads the equipped character and gun
-private void LoadEquippedItems()
-{
-    int selectedCharacter = PlayerPrefs.GetInt(CHARACTER_KEY, 0);
-    int selectedGun = PlayerPrefs.GetInt(GUN_KEY, 0);
-
-    ActivateCharacter(selectedCharacter);
-    ActivateGun(selectedGun);
-}
-
-// Activates the selected character
-private void ActivateCharacter(int index)
-{
-    if (characters == null || characters.Length == 0)
-        return;
-
-    // Deactivates all character objects
-    foreach (CharacterEquipment character in characters)
+    private void LoadEquippedItems()
     {
-        if (character == null || character.characterObjects == null)
-            continue;
+        int selectedCharacter = PlayerPrefs.GetInt(CHARACTER_KEY, 0);
+        int selectedGun = PlayerPrefs.GetInt(GUN_KEY, 0);
 
-        foreach (GameObject obj in character.characterObjects)
+        ActivateCharacter(selectedCharacter);
+        ActivateGun(selectedGun);
+    }
+
+    // Activates the selected character
+    private void ActivateCharacter(int index)
+    {
+        if (characters == null || characters.Length == 0)
+            return;
+
+        // Deactivates all character objects
+        foreach (CharacterEquipment character in characters)
+        {
+            if (character == null || character.characterObjects == null)
+                continue;
+
+            foreach (GameObject obj in character.characterObjects)
+            {
+                if (obj != null)
+                    obj.SetActive(false);
+            }
+        }
+
+        // Checks the selected character index
+        if (index < 0 || index >= characters.Length)
+        {
+            Debug.LogWarning("Selected character index is invalid: " + index);
+            return;
+        }
+
+        CharacterEquipment selected = characters[index];
+
+        if (selected == null || selected.characterObjects == null)
+            return;
+
+        // Activates the selected character objects
+        foreach (GameObject obj in selected.characterObjects)
         {
             if (obj != null)
-                obj.SetActive(false);
+                obj.SetActive(true);
         }
     }
-
-    // Checks the selected character index
-    if (index < 0 || index >= characters.Length)
-    {
-        Debug.LogWarning("Selected character index is invalid: " + index);
-        return;
-    }
-
-    CharacterEquipment selected = characters[index];
-
-    if (selected == null || selected.characterObjects == null)
-        return;
-
-    // Activates the selected character objects
-    foreach (GameObject obj in selected.characterObjects)
-    {
-        if (obj != null)
-            obj.SetActive(true);
-    }
-}
 
     // Activates the selected gun
     private void ActivateGun(int index)
@@ -354,6 +426,17 @@ private void ActivateCharacter(int index)
 
         UpdateEnemyTierUnlocks();
         UpdateExplosiveTierUnlocks();
+    
+        if (GameManager.Instance.isGameRunning)
+            elapsedTime += Time.deltaTime;
+
+        UpdateTimerUI();
+    }
+
+    private void UpdateTimerUI()
+    {
+        if (timerText != null)
+            timerText.text = GameManager.Instance.FormatTime(elapsedTime);
     }
 
     public void UpdateItemHUD()
@@ -522,11 +605,7 @@ private void ActivateCharacter(int index)
     }
 
     // Get object from pool
-    private GameObject GetPooledObject(
-        GameObject prefab,
-        Vector3 position,
-        Quaternion rotation,
-        bool isExplosive)
+    private GameObject GetPooledObject(GameObject prefab, Vector3 position, Quaternion rotation, bool isExplosive)
     {
         if (prefab == null)
             return null;
@@ -547,11 +626,8 @@ private void ActivateCharacter(int index)
         if (spawnedObject == null)
         {
             spawnedObject = Instantiate(prefab, position, rotation, transform);
-
             spawnedObject.SetActive(false);
-
-            SpawnTracker newTracker =
-                spawnedObject.GetComponent<SpawnTracker>();
+            SpawnTracker newTracker = spawnedObject.GetComponent<SpawnTracker>();
 
             if (newTracker == null)
                 newTracker = spawnedObject.AddComponent<SpawnTracker>();
@@ -560,9 +636,7 @@ private void ActivateCharacter(int index)
         }
 
         spawnedObject.transform.SetPositionAndRotation(position, rotation);
-
-        SpawnTracker tracker =
-            spawnedObject.GetComponent<SpawnTracker>();
+        SpawnTracker tracker = spawnedObject.GetComponent<SpawnTracker>();
 
         if (tracker == null)
             tracker = spawnedObject.AddComponent<SpawnTracker>();
@@ -606,9 +680,7 @@ private void ActivateCharacter(int index)
             return;
 
         activeObjects.Remove(spawnedObject);
-
-        SpawnTracker tracker =
-            spawnedObject.GetComponent<SpawnTracker>();
+        SpawnTracker tracker = spawnedObject.GetComponent<SpawnTracker>();
 
         if (tracker != null)
             tracker.MarkReturnedToPool();
@@ -780,7 +852,7 @@ private void ActivateCharacter(int index)
         return false;
     }
 
-    // TIER SELECTION
+    // Tier selection
     private SpawnTier GetRandomUnlockedTier(
         SpawnTier[] tiers,
         int unlockedTier)
@@ -898,6 +970,7 @@ private void ActivateCharacter(int index)
     public void StopSpawning()
     {
         spawningEnabled = false;
+        GameManager.Instance.isGameRunning = false;
 
         if (enemySpawnRoutine != null)
         {
@@ -928,87 +1001,4 @@ private void ActivateCharacter(int index)
     {
         StopSpawning();
     }
-
-    #region Slider
-    // Intro sequence
-    private IEnumerator PlayIntroSequence()
-    {
-        // Show loading screen.
-        if (loadingCanvas != null)
-        {
-            loadingCanvas.gameObject.SetActive(true);
-            loadingCanvas.alpha = 1f;
-            loadingCanvas.interactable = true;
-            loadingCanvas.blocksRaycasts = true;
-        }
-
-        if (progressBar != null)
-            progressBar.value = 0f;
-
-        if (progressText != null)
-            progressText.text = "0%";
-
-        yield return StartCoroutine(AnimateLoadingSlider());
-
-        // Fade out loading screen.
-        if (loadingCanvas != null)
-        {
-            yield return loadingCanvas.DOFade(0f, 0.2f)
-                .SetEase(Ease.InOutSine)
-                .WaitForCompletion();
-
-            loadingCanvas.gameObject.SetActive(false);
-            loadingCanvas.alpha = 0f;
-            loadingCanvas.interactable = false;
-            loadingCanvas.blocksRaycasts = false;
-        }
-    }
-
-    private IEnumerator AnimateLoadingSlider()
-    {
-        if (progressBar == null || progressText == null)
-            yield break;
-
-        float displayedProgress = 0f;
-
-        while (displayedProgress < 1f)
-        {
-            float pauseDuration = Random.Range(0.2f, 0.35f);
-            yield return new WaitForSeconds(pauseDuration);
-
-            float segmentDuration = Random.Range(0.1f, 0.3f);
-            float segmentStart = displayedProgress;
-            float segmentEnd = Mathf.Min(1f, segmentStart + Random.Range(0.12f, 0.28f));
-
-            float elapsed = 0f;
-
-            while (elapsed < segmentDuration)
-            {
-                elapsed += Time.deltaTime;
-
-                float t = Mathf.Clamp01(elapsed / segmentDuration);
-
-                displayedProgress = Mathf.Lerp(
-                    segmentStart,
-                    segmentEnd,
-                    Mathf.SmoothStep(0f, 1f, t)
-                );
-
-                progressBar.value = displayedProgress;
-                progressText.text = Mathf.RoundToInt(displayedProgress * 100f) + "%";
-
-                yield return null;
-            }
-
-            displayedProgress = segmentEnd;
-            progressBar.value = displayedProgress;
-            progressText.text = Mathf.RoundToInt(displayedProgress * 100f) + "%";
-        }
-
-        progressBar.value = 1f;
-        progressText.text = "100%";
-
-        yield return new WaitForSeconds(0.4f);
-    }
-    #endregion
 }

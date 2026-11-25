@@ -27885,11 +27885,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5cac2662437b6e94f8d0511b814db1fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraLook
-  horizontalSensitivity: 0.35
-  verticalSensitivity: 0.15
+  horizontalSensitivity: 0.32
+  verticalSensitivity: 0.17
   minVerticalAngle: -75
   maxVerticalAngle: 75
-  useRightSideOfScreen: 0
+  useRightSideOfScreen: 1
   touchAreaStartX: 0.5
   playerBody: {fileID: 2002817541}
 --- !u!1 &329494961

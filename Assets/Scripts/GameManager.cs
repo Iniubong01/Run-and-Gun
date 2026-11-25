@@ -9,7 +9,7 @@ public class GameManager : MonoBehaviour
     [Header("Game Timer")]
     [SerializeField] private TextMeshProUGUI timerText;
     [SerializeField] private float elapsedTime;
-    private bool isGameRunning;
+    public bool isGameRunning;
 
     [Header("Time High Score")]
     [SerializeField] private TextMeshProUGUI currentTimeText;
@@ -76,7 +76,6 @@ public class GameManager : MonoBehaviour
 
         LoadGameData();
 
-        UpdateTimerUI();
         UpdateHighScoreUI();
         UpdateTotalCoinsUI();
     }
@@ -87,8 +86,6 @@ public class GameManager : MonoBehaviour
             return;
 
         elapsedTime += Time.deltaTime;
-
-        UpdateTimerUI();
     }
 
     // Start game
@@ -146,12 +143,6 @@ public class GameManager : MonoBehaviour
         SaveCoins();
     }
 
-    private void UpdateTimerUI()
-    {
-        if (timerText != null)
-            timerText.text = FormatTime(elapsedTime);
-    }
-
     private void UpdateKillUI()
     {
         if (enemiesKilledText != null)
@@ -179,7 +170,7 @@ public class GameManager : MonoBehaviour
     }
 
     // Format time in minutes and seconds
-    private string FormatTime(float time)
+    public string FormatTime(float time)
     {
         int minutes = Mathf.FloorToInt(time / 60f);
         int seconds = Mathf.FloorToInt(time % 60f);
@@ -290,8 +281,6 @@ public class GameManager : MonoBehaviour
     public void ResetTimer()
     {
         elapsedTime = 0f;
-
-        UpdateTimerUI();
     }
 
     // -- General Reset
