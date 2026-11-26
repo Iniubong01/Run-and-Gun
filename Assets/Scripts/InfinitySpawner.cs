@@ -307,14 +307,33 @@ public class InfinitySpawner : MonoBehaviour
         }
     }
 
-    // INITIALIZE SPAWNER
+    // INITIALIZE SPAWNER// INITIALIZE SPAWNER
     public void InitializeSpawner()
     {
-        // StopSpawning();
+        // Stop existing spawning routines
+        if (enemySpawnRoutine != null)
+        {
+            StopCoroutine(enemySpawnRoutine);
+            enemySpawnRoutine = null;
+        }
 
-        // ReturnAllActiveObjectsToPool();
+        if (explosiveSpawnRoutine != null)
+        {
+            StopCoroutine(explosiveSpawnRoutine);
+            explosiveSpawnRoutine = null;
+        }
+
+        CancelInvoke();
+
+        ReturnAllActiveObjectsToPool();
 
         FindPlayer();
+
+        if (player == null)
+        {
+            Debug.LogError("Player not found! Spawner cannot initialize.");
+            return;
+        }
 
         elapsedGameTime = 0f;
 
@@ -324,10 +343,7 @@ public class InfinitySpawner : MonoBehaviour
         enemyUnlockTimer = 0f;
         explosiveUnlockTimer = 0f;
 
-        activeEnemyCount = 0;
-        activeExplosiveCount = 0;
-
-        // Independent enemy unlock schedules.
+        // Generate independent enemy unlock schedules
         enemyTier2Time = Random.Range(
             enemyTier2UnlockTime.x,
             enemyTier2UnlockTime.y
@@ -343,7 +359,7 @@ public class InfinitySpawner : MonoBehaviour
             enemyTier4UnlockTime.y
         );
 
-        // Independent explosive unlock schedules.
+        // Generate independent explosive unlock schedules
         explosiveTier2Time = Random.Range(
             explosiveTier2UnlockTime.x,
             explosiveTier2UnlockTime.y
@@ -359,11 +375,9 @@ public class InfinitySpawner : MonoBehaviour
             explosiveTier4UnlockTime.y
         );
 
+        // Start independent spawning routines
         enemySpawnRoutine = StartCoroutine(EnemySpawner());
         explosiveSpawnRoutine = StartCoroutine(ExplosiveSpawner());
-
-        InvokeRepeating(nameof(SpawnEnemy), 7, GetEnemySpawnInterval());
-        InvokeRepeating(nameof(SpawnExplosive), 8, GetExplosiveSpawnInterval());
 
         Debug.Log("Endless Spawner Initialized!");
     }
@@ -880,23 +894,15 @@ public class InfinitySpawner : MonoBehaviour
     }
 
     // RANDOM SPAWN POSITIONS
-    private bool TryGetRandomSpawnPosition(
-        out Vector3 spawnPosition)
+    private bool TryGetRandomSpawnPosition(out Vector3 spawnPosition)
     {
         spawnPosition = Vector3.zero;
 
         if (player == null)
             return false;
 
-        float minimumDistance = Mathf.Max(
-            0.1f,
-            spawnDistanceFromPlayer - spawnDistanceVariation
-        );
-
-        float maximumDistance = Mathf.Max(
-            minimumDistance,
-            spawnDistanceFromPlayer + spawnDistanceVariation
-        );
+        float minimumDistance = Mathf.Max(0.1f, spawnDistanceFromPlayer - spawnDistanceVariation);
+        float maximumDistance = Mathf.Max( minimumDistance, spawnDistanceFromPlayer + spawnDistanceVariation);
 
         // Keep the Z position fixed within the configured limits.
         float fixedZ = Mathf.Clamp(
@@ -908,16 +914,14 @@ public class InfinitySpawner : MonoBehaviour
         for (int i = 0; i < 30; i++)
         {
             // Random distance from the player's current X position.
-            float randomDistance = Random.Range(
-                minimumDistance,
+            float randomDistance = Random.Range(minimumDistance,
                 maximumDistance
             );
 
             // Randomly choose forward or backward.
             float direction = Random.value < 0.5f ? -1f : 1f;
 
-            float randomX = player.position.x +
-                            randomDistance * direction;
+            float randomX = player.position.x + randomDistance * direction;
 
             Vector3 randomPosition = new Vector3(
                 randomX,

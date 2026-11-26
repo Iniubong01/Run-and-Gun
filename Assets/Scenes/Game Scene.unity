@@ -50652,8 +50652,8 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1244552106}
   - {fileID: 1387007261}
+  - {fileID: 1244552106}
   - {fileID: 1882921495}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -74809,7 +74809,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 740c45d8f8b73f84ab467cf061e29707, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy
-  player: {fileID: 0}
+  player: {fileID: 2002817541}
   whatIsGround:
     serializedVersion: 2
     m_Bits: 128
@@ -74948,7 +74948,7 @@ Transform:
   m_GameObject: {fileID: 1641883854}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -83.2, y: 0.19731748, z: -4}
+  m_LocalPosition: {x: -134.5, y: 0.19731748, z: -4}
   m_LocalScale: {x: 1.6999999, y: 1.6999999, z: 1.6999999}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -93223,7 +93223,7 @@ MonoBehaviour:
   teleportFill: {fileID: 267674107}
   canTeleport: 1
   isTeleporting: 0
-  teleportDistance: 140
+  teleportDistance: 90
   teleportDuration: 0.4
   teleportCooldown: 1
   teleportVisual: {fileID: 0}
@@ -93289,7 +93289,7 @@ Transform:
   m_GameObject: {fileID: 2002817536}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.7071068, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 0.5329275, z: -7}
+  m_LocalPosition: {x: -86.76, y: 0.5329275, z: -7}
   m_LocalScale: {x: 1.6999999, y: 1.6999999, z: 1.6999999}
   m_ConstrainProportionsScale: 1
   m_Children:

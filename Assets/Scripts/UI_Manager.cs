@@ -415,8 +415,7 @@ public class UI_Manager : MonoBehaviour
         if (teleportCharge < 0.2f)
             return;
 
-        teleportCharge = Mathf.Max(0, Mathf.RoundToInt(teleportCharge) - 0.2f);
-        UpdatePlayerTeleportUI();
+        teleportCharge -= 0.2f;
     }
 
     // Returns the current number of charges.
