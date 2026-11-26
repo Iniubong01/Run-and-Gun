@@ -49,6 +49,7 @@ public class InfinitySpawner : MonoBehaviour
 
     [Min(1f)]
     public float groundCheckDistance = 10f;
+
     [Min(1f)]
     public float minimumPlayerDistance = 10f;
 
@@ -101,6 +102,7 @@ public class InfinitySpawner : MonoBehaviour
     public LayerMask obstacleLayer;
 
     public GameObject cam;
+
     [Header("Game Timer")]
     [SerializeField] private TextMeshProUGUI timerText;
 
@@ -117,13 +119,10 @@ public class InfinitySpawner : MonoBehaviour
 
     // ACTIVE LIMITS
     [Header("Active Object Limits")]
-    public int maximumActiveEnemies = 30;
+    public int maximumActiveEnemies = 20;
     public int maximumActiveExplosives = 15;
 
-    // RUNTIME
-    [Header("Runtime")]
-    public bool spawningEnabled = true;
-
+    // LOADING UI
     [Header("Loading UI")]
     [SerializeField] private Slider progressBar;
     [SerializeField] private Text progressText;
@@ -161,7 +160,7 @@ public class InfinitySpawner : MonoBehaviour
     [SerializeField] private TextMeshProUGUI extraLifeQuantityText;
     [SerializeField] private TextMeshProUGUI teleportQuantityText;
 
-    // Object pooling
+    // OBJECT POOLING
     private class PooledObjectInfo
     {
         public GameObject prefab;
@@ -179,18 +178,21 @@ public class InfinitySpawner : MonoBehaviour
         LoadEquippedItems();
 
         StartCoroutine(PlayIntroSequence());
+
         FindPlayer();
+
         InitializeSpawner();
+
         UpdateItemHUD();
         UpdateTimerUI();
     }
 
-    #region Loading screen
+    #region Loading Screen
+
     private IEnumerator PlayIntroSequence()
     {
         GameManager.Instance.ResetGameData();
 
-        // Show loading screen.
         if (loadingCanvas != null)
         {
             loadingCanvas.gameObject.SetActive(true);
@@ -207,7 +209,6 @@ public class InfinitySpawner : MonoBehaviour
 
         yield return StartCoroutine(AnimateLoadingSlider());
 
-        // Fade out loading screen.
         if (loadingCanvas != null)
         {
             yield return loadingCanvas.DOFade(0f, 0.2f)
@@ -219,7 +220,7 @@ public class InfinitySpawner : MonoBehaviour
             loadingCanvas.interactable = false;
             loadingCanvas.blocksRaycasts = false;
         }
-        
+
         GameManager.Instance.StartGame();
     }
 
@@ -237,7 +238,11 @@ public class InfinitySpawner : MonoBehaviour
 
             float segmentDuration = Random.Range(0.1f, 0.3f);
             float segmentStart = displayedProgress;
-            float segmentEnd = Mathf.Min(1f, segmentStart + Random.Range(0.12f, 0.28f));
+
+            float segmentEnd = Mathf.Min(
+                1f,
+                segmentStart + Random.Range(0.12f, 0.28f)
+            );
 
             float elapsed = 0f;
 
@@ -254,14 +259,18 @@ public class InfinitySpawner : MonoBehaviour
                 );
 
                 progressBar.value = displayedProgress;
-                progressText.text = Mathf.RoundToInt(displayedProgress * 100f) + "%";
+
+                progressText.text =
+                    Mathf.RoundToInt(displayedProgress * 100f) + "%";
 
                 yield return null;
             }
 
             displayedProgress = segmentEnd;
             progressBar.value = displayedProgress;
-            progressText.text = Mathf.RoundToInt(displayedProgress * 100f) + "%";
+
+            progressText.text =
+                Mathf.RoundToInt(displayedProgress * 100f) + "%";
         }
 
         progressBar.value = 1f;
@@ -269,6 +278,7 @@ public class InfinitySpawner : MonoBehaviour
 
         yield return new WaitForSeconds(0.4f);
     }
+
     #endregion
 
     private void FindPlayer()
@@ -276,22 +286,33 @@ public class InfinitySpawner : MonoBehaviour
         if (player != null)
             return;
 
-        FPP_PlayerController controller = GameObject.Find("Player").GetComponent<FPP_PlayerController>();
+        GameObject playerObject = GameObject.Find("Player");
+
+        if (playerObject == null)
+            return;
+
+        FPP_PlayerController controller =
+            playerObject.GetComponent<FPP_PlayerController>();
 
         if (controller != null)
         {
             controller.gameObject.SetActive(true);
+
             cam = GameObject.Find("UI Camera");
-            cam.SetActive(false);
-            player = controller.transform; 
+
+            if (cam != null)
+                cam.SetActive(false);
+
+            player = controller.transform;
         }
     }
 
-    // Initialize spawner
+    // INITIALIZE SPAWNER
     public void InitializeSpawner()
     {
-        StopSpawning();
-        ReturnAllActiveObjectsToPool();
+        // StopSpawning();
+
+        // ReturnAllActiveObjectsToPool();
 
         FindPlayer();
 
@@ -306,25 +327,48 @@ public class InfinitySpawner : MonoBehaviour
         activeEnemyCount = 0;
         activeExplosiveCount = 0;
 
-        // Independent enemy unlock schedules
-        enemyTier2Time = Random.Range(enemyTier2UnlockTime.x, enemyTier2UnlockTime.y);
-        enemyTier3Time = enemyTier2Time + Random.Range(enemyTier3UnlockTime.x, enemyTier3UnlockTime.y);
-        enemyTier4Time = enemyTier3Time + Random.Range(enemyTier4UnlockTime.x, enemyTier4UnlockTime.y);
+        // Independent enemy unlock schedules.
+        enemyTier2Time = Random.Range(
+            enemyTier2UnlockTime.x,
+            enemyTier2UnlockTime.y
+        );
 
-        // Independent explosive unlock schedules
-        explosiveTier2Time = Random.Range(explosiveTier2UnlockTime.x, explosiveTier2UnlockTime.y);
-        explosiveTier3Time = explosiveTier2Time + Random.Range(explosiveTier3UnlockTime.x, explosiveTier3UnlockTime.y);
-        explosiveTier4Time = explosiveTier3Time + Random.Range(explosiveTier4UnlockTime.x, explosiveTier4UnlockTime.y);
+        enemyTier3Time = enemyTier2Time + Random.Range(
+            enemyTier3UnlockTime.x,
+            enemyTier3UnlockTime.y
+        );
 
-        spawningEnabled = true;
+        enemyTier4Time = enemyTier3Time + Random.Range(
+            enemyTier4UnlockTime.x,
+            enemyTier4UnlockTime.y
+        );
+
+        // Independent explosive unlock schedules.
+        explosiveTier2Time = Random.Range(
+            explosiveTier2UnlockTime.x,
+            explosiveTier2UnlockTime.y
+        );
+
+        explosiveTier3Time = explosiveTier2Time + Random.Range(
+            explosiveTier3UnlockTime.x,
+            explosiveTier3UnlockTime.y
+        );
+
+        explosiveTier4Time = explosiveTier3Time + Random.Range(
+            explosiveTier4UnlockTime.x,
+            explosiveTier4UnlockTime.y
+        );
 
         enemySpawnRoutine = StartCoroutine(EnemySpawner());
         explosiveSpawnRoutine = StartCoroutine(ExplosiveSpawner());
 
+        InvokeRepeating(nameof(SpawnEnemy), 7, GetEnemySpawnInterval());
+        InvokeRepeating(nameof(SpawnExplosive), 8, GetExplosiveSpawnInterval());
+
         Debug.Log("Endless Spawner Initialized!");
     }
 
-    // Loads the equipped character and gun
+    // LOAD EQUIPPED ITEMS
     private void LoadEquippedItems()
     {
         int selectedCharacter = PlayerPrefs.GetInt(CHARACTER_KEY, 0);
@@ -334,13 +378,12 @@ public class InfinitySpawner : MonoBehaviour
         ActivateGun(selectedGun);
     }
 
-    // Activates the selected character
+    // ACTIVATE CHARACTER
     private void ActivateCharacter(int index)
     {
         if (characters == null || characters.Length == 0)
             return;
 
-        // Deactivates all character objects
         foreach (CharacterEquipment character in characters)
         {
             if (character == null || character.characterObjects == null)
@@ -353,10 +396,12 @@ public class InfinitySpawner : MonoBehaviour
             }
         }
 
-        // Checks the selected character index
         if (index < 0 || index >= characters.Length)
         {
-            Debug.LogWarning("Selected character index is invalid: " + index);
+            Debug.LogWarning(
+                "Selected character index is invalid: " + index
+            );
+
             return;
         }
 
@@ -365,7 +410,6 @@ public class InfinitySpawner : MonoBehaviour
         if (selected == null || selected.characterObjects == null)
             return;
 
-        // Activates the selected character objects
         foreach (GameObject obj in selected.characterObjects)
         {
             if (obj != null)
@@ -373,13 +417,12 @@ public class InfinitySpawner : MonoBehaviour
         }
     }
 
-    // Activates the selected gun
+    // ACTIVATE GUN
     private void ActivateGun(int index)
     {
         if (guns == null || guns.Length == 0)
             return;
 
-        // Deactivates all gun objects
         foreach (GunEquipment gun in guns)
         {
             if (gun == null || gun.gunObjects == null)
@@ -392,10 +435,12 @@ public class InfinitySpawner : MonoBehaviour
             }
         }
 
-        // Checks the selected gun index
         if (index < 0 || index >= guns.Length)
         {
-            Debug.LogWarning("Selected gun index is invalid: " + index);
+            Debug.LogWarning(
+                "Selected gun index is invalid: " + index
+            );
+
             return;
         }
 
@@ -404,7 +449,6 @@ public class InfinitySpawner : MonoBehaviour
         if (selected == null || selected.gunObjects == null)
             return;
 
-        // Activates the selected gun objects
         foreach (GameObject obj in selected.gunObjects)
         {
             if (obj != null)
@@ -414,8 +458,13 @@ public class InfinitySpawner : MonoBehaviour
 
     private void Update()
     {
-        if (!spawningEnabled)
+        // The game timer and tier progression only run while
+        // the spawning routines are active.
+        if (enemySpawnRoutine == null &&
+            explosiveSpawnRoutine == null)
+        {
             return;
+        }
 
         elapsedGameTime += Time.deltaTime;
 
@@ -427,26 +476,46 @@ public class InfinitySpawner : MonoBehaviour
 
     private void UpdateTimerUI()
     {
-        if (timerText != null)
-            timerText.text = GameManager.Instance.FormatTime(GameManager.Instance.elapsedTime);
+        if (timerText != null && GameManager.Instance != null)
+        {
+            timerText.text = GameManager.Instance.FormatTime(
+                GameManager.Instance.elapsedTime
+            );
+        }
     }
 
+    // UPDATE ITEM HUD
     public void UpdateItemHUD()
     {
+        if (StoreManager.Instance == null)
+            return;
+
         if (healthQuantityText != null)
-            healthQuantityText.text = StoreManager.Instance.GetItemCount(StoreItemType.Health).ToString();
+        {
+            healthQuantityText.text =
+                StoreManager.Instance.GetItemCount(StoreItemType.Health).ToString();
+        }
 
         if (ammoQuantityText != null)
-            ammoQuantityText.text = StoreManager.Instance.GetItemCount(StoreItemType.Ammo).ToString();
+        {
+            ammoQuantityText.text =
+                StoreManager.Instance.GetItemCount(StoreItemType.Ammo).ToString();
+        }
 
         if (extraLifeQuantityText != null)
-            extraLifeQuantityText.text = StoreManager.Instance.GetItemCount(StoreItemType.ExtraLife).ToString();
+        {
+            extraLifeQuantityText.text =
+                StoreManager.Instance.GetItemCount(StoreItemType.ExtraLife).ToString();
+        }
 
         if (teleportQuantityText != null)
-            teleportQuantityText.text = StoreManager.Instance.GetItemCount(StoreItemType.Teleport).ToString();
+        {
+            teleportQuantityText.text =
+                StoreManager.Instance.GetItemCount(StoreItemType.Teleport).ToString();
+        }
     }
 
-    // Enemy tier progression
+    // ENEMY TIER PROGRESSION
     private void UpdateEnemyTierUnlocks()
     {
         enemyUnlockTimer += Time.deltaTime;
@@ -464,10 +533,11 @@ public class InfinitySpawner : MonoBehaviour
     private void UnlockEnemyTier(int tier)
     {
         unlockedEnemyTier = tier;
+
         Debug.Log($"ENEMY TIER {tier} UNLOCKED!");
     }
 
-    // Explosives tier progression
+    // EXPLOSIVE TIER PROGRESSION
     private void UpdateExplosiveTierUnlocks()
     {
         explosiveUnlockTimer += Time.deltaTime;
@@ -485,34 +555,19 @@ public class InfinitySpawner : MonoBehaviour
     private void UnlockExplosiveTier(int tier)
     {
         unlockedExplosiveTier = tier;
+
         Debug.Log($"EXPLOSIVE TIER {tier} UNLOCKED!");
     }
 
-    // Enemy spawner
+    // ENEMY SPAWNER
     private IEnumerator EnemySpawner()
     {
-        if(activeEnemyCount > 7)
-        {
-            UI_Manager.Instance.ShowAlert();
-        }
-
-        while (spawningEnabled)
+        while (true)
         {
             yield return new WaitForSeconds(GetEnemySpawnInterval());
-
-            if (!spawningEnabled)
-                yield break;
-
-            if (activeEnemyCount >= maximumActiveEnemies)
-                continue;
-
             int spawnCount = GetEnemySpawnCount();
-
             for (int i = 0; i < spawnCount; i++)
             {
-                if (activeEnemyCount >= maximumActiveEnemies)
-                    break;
-
                 SpawnEnemy();
             }
         }
@@ -520,7 +575,10 @@ public class InfinitySpawner : MonoBehaviour
 
     private void SpawnEnemy()
     {
-        SpawnTier tier = GetRandomUnlockedTier(enemyTiers, unlockedEnemyTier);
+        SpawnTier tier = GetRandomUnlockedTier(
+            enemyTiers,
+            unlockedEnemyTier
+        );
 
         if (tier == null)
             return;
@@ -533,7 +591,12 @@ public class InfinitySpawner : MonoBehaviour
         if (!TryGetRandomSpawnPosition(out Vector3 position))
             return;
 
-        GameObject enemy = GetPooledObject(prefab, position, Quaternion.identity, false);
+        GameObject enemy = GetPooledObject(
+            prefab,
+            position,
+            Quaternion.identity,
+            false
+        );
 
         if (enemy == null)
             return;
@@ -541,16 +604,19 @@ public class InfinitySpawner : MonoBehaviour
         activeEnemyCount++;
     }
 
-    // Explosives spawner
+    // EXPLOSIVE SPAWNER
     private IEnumerator ExplosiveSpawner()
     {
-        while (spawningEnabled)
+        while (true)
         {
+            // Wait while the maximum number of active explosives is reached.
+            // Automatically resumes when the count drops below the limit.
+            while (activeExplosiveCount >= maximumActiveExplosives)
+                yield return null;
+
             yield return new WaitForSeconds(GetExplosiveSpawnInterval());
 
-            if (!spawningEnabled)
-                yield break;
-
+            // Check the limit again after waiting.
             if (activeExplosiveCount >= maximumActiveExplosives)
                 continue;
 
@@ -565,13 +631,14 @@ public class InfinitySpawner : MonoBehaviour
             }
         }
     }
-    
-    // Spawn obstacles
+
+    // SPAWN OBSTACLES
     private void SpawnExplosive()
     {
-        Debug.Log("Attempting to spawn obstacle...");
-
-        SpawnTier tier = GetRandomUnlockedTier(explosiveTiers,  unlockedExplosiveTier);
+        SpawnTier tier = GetRandomUnlockedTier(
+            explosiveTiers,
+            unlockedExplosiveTier
+        );
 
         if (tier == null)
             return;
@@ -584,25 +651,32 @@ public class InfinitySpawner : MonoBehaviour
         if (!TryGetRandomSpawnPosition(out Vector3 position))
             return;
 
-        GameObject explosive = GetPooledObject(prefab, position, Quaternion.identity, true);
+        GameObject explosive = GetPooledObject(
+            prefab,
+            position,
+            Quaternion.identity,
+            true
+        );
 
         if (explosive == null)
-        {
-            Debug.LogWarning("Obstacle spawn failed: GetPooledObject returned null.");
             return;
-        }
 
         activeExplosiveCount++;
-        Debug.Log("Obstacle successfully spawned: " + explosive.name);
     }
 
-    // Get object from pool
-    private GameObject GetPooledObject(GameObject prefab, Vector3 position, Quaternion rotation, bool isExplosive)
+    // GET OBJECT FROM POOL
+    private GameObject GetPooledObject(
+        GameObject prefab,
+        Vector3 position,
+        Quaternion rotation,
+        bool isExplosive)
     {
         if (prefab == null)
             return null;
 
-        if (!objectPools.TryGetValue(prefab, out Queue<GameObject> pool))
+        if (!objectPools.TryGetValue(
+            prefab,
+            out Queue<GameObject> pool))
         {
             pool = new Queue<GameObject>();
             objectPools.Add(prefab, pool);
@@ -617,21 +691,38 @@ public class InfinitySpawner : MonoBehaviour
 
         if (spawnedObject == null)
         {
-            spawnedObject = Instantiate(prefab, position, rotation, transform);
+            spawnedObject = Instantiate(
+                prefab,
+                position,
+                rotation,
+                transform
+            );
+
             spawnedObject.SetActive(false);
-            SpawnTracker newTracker = spawnedObject.GetComponent<SpawnTracker>();
+
+            SpawnTracker newTracker =
+                spawnedObject.GetComponent<SpawnTracker>();
 
             if (newTracker == null)
+            {
                 newTracker = spawnedObject.AddComponent<SpawnTracker>();
+            }
 
             newTracker.Initialize(this, isExplosive);
         }
 
-        spawnedObject.transform.SetPositionAndRotation(position, rotation);
-        SpawnTracker tracker = spawnedObject.GetComponent<SpawnTracker>();
+        spawnedObject.transform.SetPositionAndRotation(
+            position,
+            rotation
+        );
+
+        SpawnTracker tracker =
+            spawnedObject.GetComponent<SpawnTracker>();
 
         if (tracker == null)
+        {
             tracker = spawnedObject.AddComponent<SpawnTracker>();
+        }
 
         tracker.Initialize(this, isExplosive);
 
@@ -662,28 +753,42 @@ public class InfinitySpawner : MonoBehaviour
         return spawnedObject;
     }
 
-    // Return object to pool
-    public void ReturnToPool(GameObject spawnedObject, bool isExplosive)
+    // RETURN OBJECT TO POOL
+    public void ReturnToPool(
+        GameObject spawnedObject,
+        bool isExplosive)
     {
         if (spawnedObject == null)
             return;
 
-        if (!activeObjects.TryGetValue(spawnedObject, out PooledObjectInfo info))
+        if (!activeObjects.TryGetValue(
+            spawnedObject,
+            out PooledObjectInfo info))
+        {
             return;
+        }
 
         activeObjects.Remove(spawnedObject);
-        SpawnTracker tracker = spawnedObject.GetComponent<SpawnTracker>();
+
+        SpawnTracker tracker =
+            spawnedObject.GetComponent<SpawnTracker>();
 
         if (tracker != null)
             tracker.MarkReturnedToPool();
 
         if (info.isExplosive)
         {
-            activeExplosiveCount = Mathf.Max(0, activeExplosiveCount - 1);
+            activeExplosiveCount = Mathf.Max(
+                0,
+                activeExplosiveCount - 1
+            );
         }
         else
         {
-            activeEnemyCount = Mathf.Max(0, activeEnemyCount - 1);
+            activeEnemyCount = Mathf.Max(
+                0,
+                activeEnemyCount - 1
+            );
         }
 
         Enemy enemy = spawnedObject.GetComponent<Enemy>();
@@ -703,7 +808,9 @@ public class InfinitySpawner : MonoBehaviour
 
         spawnedObject.SetActive(false);
 
-        if (!objectPools.TryGetValue(info.prefab, out Queue<GameObject> pool))
+        if (!objectPools.TryGetValue(
+            info.prefab,
+            out Queue<GameObject> pool))
         {
             pool = new Queue<GameObject>();
             objectPools.Add(info.prefab, pool);
@@ -732,7 +839,8 @@ public class InfinitySpawner : MonoBehaviour
 
             PooledObjectInfo info = activeObjects[obj];
 
-            SpawnTracker tracker = obj.GetComponent<SpawnTracker>();
+            SpawnTracker tracker =
+                obj.GetComponent<SpawnTracker>();
 
             if (tracker != null)
                 tracker.MarkReturnedToPool();
@@ -756,7 +864,9 @@ public class InfinitySpawner : MonoBehaviour
 
             obj.SetActive(false);
 
-            if (!objectPools.TryGetValue(info.prefab, out Queue<GameObject> pool))
+            if (!objectPools.TryGetValue(
+                info.prefab,
+                out Queue<GameObject> pool))
             {
                 pool = new Queue<GameObject>();
                 objectPools.Add(info.prefab, pool);
@@ -769,43 +879,55 @@ public class InfinitySpawner : MonoBehaviour
         activeExplosiveCount = 0;
     }
 
-    // Random spawn positions from the player's current x position
-    private bool TryGetRandomSpawnPosition(out Vector3 spawnPosition)
+    // RANDOM SPAWN POSITIONS
+    private bool TryGetRandomSpawnPosition(
+        out Vector3 spawnPosition)
     {
         spawnPosition = Vector3.zero;
 
         if (player == null)
             return false;
 
-        float minimumDistance = Mathf.Max(0.1f, spawnDistanceFromPlayer - spawnDistanceVariation);
+        float minimumDistance = Mathf.Max(
+            0.1f,
+            spawnDistanceFromPlayer - spawnDistanceVariation
+        );
 
-        float maximumDistance = Mathf.Max(minimumDistance, spawnDistanceFromPlayer + spawnDistanceVariation );
+        float maximumDistance = Mathf.Max(
+            minimumDistance,
+            spawnDistanceFromPlayer + spawnDistanceVariation
+        );
 
-        float lowerZ = Mathf.Min(minZ, maxZ);
-        float upperZ = Mathf.Max(minZ, maxZ);
+        // Keep the Z position fixed within the configured limits.
+        float fixedZ = Mathf.Clamp(
+            player.position.z,
+            Mathf.Min(minZ, maxZ),
+            Mathf.Max(minZ, maxZ)
+        );
 
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < 30; i++)
         {
-            // Randomizes the distance from the player
+            // Random distance from the player's current X position.
             float randomDistance = Random.Range(
                 minimumDistance,
                 maximumDistance
             );
 
-            // Randomizes whether to spawn in front or behind
+            // Randomly choose forward or backward.
             float direction = Random.value < 0.5f ? -1f : 1f;
 
-            // Calculates the spawn position
             float randomX = player.position.x +
-                (randomDistance * direction);
+                            randomDistance * direction;
 
-            float randomZ = Random.Range(lowerZ, upperZ);
+            Vector3 randomPosition = new Vector3(
+                randomX,
+                player.position.y,
+                fixedZ
+            );
 
-            Vector3 randomPosition = new Vector3(randomX, player.position.y, randomZ);
-
-            // Checks for the ground
+            // Check for ground.
             Vector3 rayOrigin = randomPosition +
-                Vector3.up * groundCheckDistance;
+                                Vector3.up * groundCheckDistance;
 
             if (!Physics.Raycast(
                 rayOrigin,
@@ -820,7 +942,7 @@ public class InfinitySpawner : MonoBehaviour
 
             Vector3 candidate = groundHit.point;
 
-            // Checks if the spawn position is occupied
+            // Check whether the spawn position is occupied.
             if (Physics.CheckSphere(
                 candidate + Vector3.up * spawnCheckRadius,
                 spawnCheckRadius,
@@ -830,7 +952,7 @@ public class InfinitySpawner : MonoBehaviour
                 continue;
             }
 
-            // Checks minimum player distance
+            // Check minimum distance from player.
             if (Vector3.Distance(candidate, player.position) <
                 minimumPlayerDistance)
             {
@@ -838,13 +960,14 @@ public class InfinitySpawner : MonoBehaviour
             }
 
             spawnPosition = candidate;
+
             return true;
         }
 
         return false;
     }
 
-    // Tier selection
+    // TIER SELECTION
     private SpawnTier GetRandomUnlockedTier(
         SpawnTier[] tiers,
         int unlockedTier)
@@ -859,10 +982,16 @@ public class InfinitySpawner : MonoBehaviour
             if (i >= tiers.Length || tiers[i] == null)
                 continue;
 
-            if (tiers[i].prefabs == null || tiers[i].prefabs.Length == 0)
+            if (tiers[i].prefabs == null ||
+                tiers[i].prefabs.Length == 0)
+            {
                 continue;
+            }
 
-            totalWeight += Mathf.Max(0f, tiers[i].spawnWeight);
+            totalWeight += Mathf.Max(
+                0f,
+                tiers[i].spawnWeight
+            );
         }
 
         if (totalWeight <= 0f)
@@ -875,10 +1004,16 @@ public class InfinitySpawner : MonoBehaviour
             if (i >= tiers.Length || tiers[i] == null)
                 continue;
 
-            if (tiers[i].prefabs == null || tiers[i].prefabs.Length == 0)
+            if (tiers[i].prefabs == null ||
+                tiers[i].prefabs.Length == 0)
+            {
                 continue;
+            }
 
-            randomValue -= Mathf.Max(0f, tiers[i].spawnWeight);
+            randomValue -= Mathf.Max(
+                0f,
+                tiers[i].spawnWeight
+            );
 
             if (randomValue <= 0f)
                 return tiers[i];
@@ -889,10 +1024,16 @@ public class InfinitySpawner : MonoBehaviour
 
     private GameObject GetRandomPrefab(SpawnTier tier)
     {
-        if (tier == null || tier.prefabs == null || tier.prefabs.Length == 0)
+        if (tier == null ||
+            tier.prefabs == null ||
+            tier.prefabs.Length == 0)
+        {
             return null;
+        }
 
-        return tier.prefabs[Random.Range(0, tier.prefabs.Length)];
+        return tier.prefabs[
+            Random.Range(0, tier.prefabs.Length)
+        ];
     }
 
     // DIFFICULTY
@@ -901,7 +1042,9 @@ public class InfinitySpawner : MonoBehaviour
         if (difficultyRampDuration <= 0f)
             return 1f;
 
-        return Mathf.Clamp01(elapsedGameTime / difficultyRampDuration);
+        return Mathf.Clamp01(
+            elapsedGameTime / difficultyRampDuration
+        );
     }
 
     private float GetEnemySpawnInterval()
@@ -926,7 +1069,9 @@ public class InfinitySpawner : MonoBehaviour
     private int GetEnemySpawnCount()
     {
         int increase = enemyQuantityIncreaseInterval > 0f
-            ? Mathf.FloorToInt(elapsedGameTime / enemyQuantityIncreaseInterval)
+            ? Mathf.FloorToInt(
+                elapsedGameTime / enemyQuantityIncreaseInterval
+            )
             : 0;
 
         return Mathf.Clamp(
@@ -939,7 +1084,9 @@ public class InfinitySpawner : MonoBehaviour
     private int GetExplosiveSpawnCount()
     {
         int increase = explosiveQuantityIncreaseInterval > 0f
-            ? Mathf.FloorToInt(elapsedGameTime / explosiveQuantityIncreaseInterval)
+            ? Mathf.FloorToInt(
+                elapsedGameTime / explosiveQuantityIncreaseInterval
+            )
             : 0;
 
         return Mathf.Clamp(
@@ -953,16 +1100,25 @@ public class InfinitySpawner : MonoBehaviour
     public void OnSpawnedObjectDestroyed(bool isExplosive)
     {
         if (isExplosive)
-            activeExplosiveCount = Mathf.Max(0, activeExplosiveCount - 1);
+        {
+            activeExplosiveCount = Mathf.Max(
+                0,
+                activeExplosiveCount - 1
+            );
+        }
         else
-            activeEnemyCount = Mathf.Max(0, activeEnemyCount - 1);
+        {
+            activeEnemyCount = Mathf.Max(
+                0,
+                activeEnemyCount - 1
+            );
+        }
     }
 
-    // STOP SPAWNING
     public void StopSpawning()
     {
-        spawningEnabled = false;
-        GameManager.Instance.isGameRunning = false;
+        if (GameManager.Instance != null)
+            GameManager.Instance.isGameRunning = false;
 
         if (enemySpawnRoutine != null)
         {
@@ -977,13 +1133,11 @@ public class InfinitySpawner : MonoBehaviour
         }
     }
 
-    // Restart spawning
     public void RestartSpawning()
     {
         InitializeSpawner();
     }
 
-    // Reset everything for a new run
     public void RestartSpawner()
     {
         InitializeSpawner();

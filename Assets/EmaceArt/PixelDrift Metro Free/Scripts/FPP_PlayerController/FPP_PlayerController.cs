@@ -79,14 +79,23 @@ namespace PlayerControllers
         [SerializeField] private int ammoItemRestore = 1;
         [SerializeField] private int maxHealth = 100;
 
-
         [Header("Torch")]
         [SerializeField] private Button torchButton;
         [SerializeField] private Image torchFill;
         [SerializeField] private GameObject torchObject;
+        public bool pauseTorchRoutine;
 
-        private bool isTorchOn, isCoolingDown;
+        private bool isTorchOn;
+        private bool isCoolingDown;
+
         private Coroutine torchCoroutine;
+        private Coroutine torchRefillCoroutine;
+
+        private float torchRemainingTime;
+        
+        [Header("Teleport")]
+        [SerializeField] private Button teleportButton;
+        [SerializeField] private Image teleportFill;
 
         // TELEPORT POWERUP
         [Header("Teleport Powerup")]
@@ -181,15 +190,65 @@ namespace PlayerControllers
             ammoText = GameObject.Find("Ammo Text").GetComponent<TextMeshProUGUI>();
             clipText = GameObject.Find("Clip Text").GetComponent<TextMeshProUGUI>();
 
+            // Torch Initialization
             if (torchFill != null)
-            torchFill.fillAmount = 1f;
-            
-            // Torch button
+                torchFill.fillAmount = 1f;
+
+            if (UI_Manager.Instance != null)
+            {
+                torchRemainingTime = UI_Manager.Instance.torchDuration;
+
+                if (UI_Manager.Instance.torchSlider != null)
+                    UI_Manager.Instance.torchSlider.value = 1f;
+            }
+
             if (torchButton != null)
-            torchButton.onClick.AddListener(ToggleTorch);
+            {
+                torchButton.onClick.RemoveListener(ToggleTorch);
+                torchButton.onClick.AddListener(ToggleTorch);
+            }
 
             if (torchObject != null)
-            torchObject.SetActive(false);
+                torchObject.SetActive(false);
+
+            // TELEPORT BUTTON
+            if (teleportButton != null)
+            {
+                teleportButton.onClick.RemoveListener(UseTeleport);
+                teleportButton.onClick.AddListener(UseTeleport);
+            }
+
+            UpdateTeleportUI();
+        }
+
+        public void UseTeleport()
+        {
+            Debug.Log("Teleport button pressed.");
+
+            if (isDead)
+            {
+                Debug.LogWarning("Teleport failed: Player is dead.");
+                return;
+            }
+
+            if (isTeleporting)
+            {
+                Debug.LogWarning("Teleport failed: Player is already teleporting.");
+                return;
+            }
+
+            if (!canTeleport)
+            {
+                Debug.LogWarning("Teleport failed: Teleport is on cooldown.");
+                return;
+            }
+
+            if (UI_Manager.Instance.teleportCharge < 0.2f)
+            {
+                return;
+            }
+
+            ActivateTeleport();
         }
 
         #region Update
@@ -198,7 +257,7 @@ namespace PlayerControllers
             if (isDead)
                 return;
 
-            // TELEPORT POWERUP
+            // Teleporting
             if (isTeleporting)
             {
                 UpdateHealthSlider();
@@ -310,16 +369,12 @@ namespace PlayerControllers
 
         void HandleMouseLook()
         {
-            // if (Cursor.lockState != CursorLockMode.Locked)
-                // return;
-
             float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
 
             float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity *
                             (invertMouseY ? 1f : -1f);
 
             transform.Rotate(Vector3.up, mouseX);
-
             _cameraPitch = Mathf.Clamp(
                 _cameraPitch + mouseY,
                 -maxLookAngle,
@@ -702,9 +757,6 @@ namespace PlayerControllers
             if (!CanActivateTeleport())
                 return;
 
-            if (UI_Manager.Instance != null && !UI_Manager.Instance.CanUseTeleport())
-                return;
-
             StartCoroutine(Teleport(true));
         }
 
@@ -713,54 +765,45 @@ namespace PlayerControllers
             return !isDead && !isTeleporting && canTeleport;
         }
 
-        IEnumerator Teleport(bool consumeUICharge)
+        private IEnumerator Teleport(bool consumeUICharge)
         {
+            if (consumeUICharge && UI_Manager.Instance.teleportCharge < 0.2f)
+                yield break;
+
             isTeleporting = true;
 
-            // Determine teleport destination
+            // Determine teleport destination.
             Vector3 teleportDirection = transform.forward;
 
-            Vector3 destination = transform.position +
-                                  teleportDirection * teleportDistance;
+            Vector3 destination = transform.position + teleportDirection * teleportDistance;
 
-            // Check for obstacles
-            if (Physics.Raycast(
-                transform.position + Vector3.up * 0.5f,
-                teleportDirection,
-                out RaycastHit hit,
-                teleportDistance,
-                teleportObstacleLayers,
-                QueryTriggerInteraction.Ignore))
+            // Check for obstacles.
+            if (Physics.Raycast(transform.position + Vector3.up * 0.5f, teleportDirection,  out RaycastHit hit,
+                teleportDistance, teleportObstacleLayers, QueryTriggerInteraction.Ignore))
             {
-                destination = transform.position +
-                             teleportDirection *
-                             Mathf.Max(0f, hit.distance - teleportWallPadding);
+                destination = transform.position + teleportDirection * Mathf.Max(0f, hit.distance - teleportWallPadding);
             }
 
-            // Prevent teleporting into a wall or remaining in place
+            // Do not consume a charge if teleportation is impossible.
             if (Vector3.Distance(transform.position, destination) < 0.1f)
             {
                 isTeleporting = false;
+                UpdateTeleportUI();
                 yield break;
             }
 
-            // CONSUME TELEPORT CHARGE
-            if (consumeUICharge && UI_Manager.Instance != null)
+            // Teleport can no longer be activated during this cooldown.
+            canTeleport = false;
+
+            // Consume exactly ONE charge after validating the destination.
+            if (consumeUICharge)
                 UI_Manager.Instance.ConsumeTeleportCharge();
 
-            // Play teleport out effects
-            if (teleportOutFX != null)
-                teleportOutFX.Play();
+            UpdateTeleportUI();
 
-            animator.ResetTrigger("Die");
-            animator.ResetTrigger("Reloading");
-            animator.ResetTrigger("Shoot");
-            animator.ResetTrigger("Jump");
-            animator.ResetTrigger("Idle");
 
-            animator.SetTrigger("Teleport");
 
-            // Hide character model
+            // Hide character model.
             if (teleportVisual != null)
             {
                 float elapsed = 0f;
@@ -770,7 +813,7 @@ namespace PlayerControllers
                 {
                     elapsed += Time.deltaTime;
 
-                    float progress = elapsed / halfDuration;
+                    float progress = Mathf.Clamp01(elapsed / halfDuration);
 
                     teleportVisual.localScale = Vector3.Lerp(
                         _teleportVisualOriginalScale,
@@ -788,18 +831,29 @@ namespace PlayerControllers
                 yield return new WaitForSeconds(teleportDuration / 2f);
             }
 
-            // Move player
+            if (teleportOutFX != null)
+            teleportOutFX.Play();
+
+            if (animator != null)
+            {
+                animator.ResetTrigger("Die");
+                animator.ResetTrigger("Reloading");
+                animator.ResetTrigger("Shoot");
+                animator.ResetTrigger("Jump");
+                animator.ResetTrigger("Idle");
+
+                animator.SetTrigger("Teleport");
+            }
+
+            // Move player.
             _cc.enabled = false;
-
-            transform.position = destination;
-
+            transform.position = Vector3.Lerp(transform.position, destination, teleportDuration);
             _cc.enabled = true;
 
-            // Play teleport in effects
             if (teleportInFX != null)
                 teleportInFX.Play();
 
-            // Restore character model
+            // Restore character model.
             if (teleportVisual != null)
             {
                 float elapsed = 0f;
@@ -809,7 +863,7 @@ namespace PlayerControllers
                 {
                     elapsed += Time.deltaTime;
 
-                    float progress = elapsed / halfDuration;
+                    float progress = Mathf.Clamp01(elapsed / halfDuration);
 
                     teleportVisual.localScale = Vector3.Lerp(
                         Vector3.zero,
@@ -828,80 +882,177 @@ namespace PlayerControllers
             }
 
             isTeleporting = false;
-            animator.ResetTrigger("Teleport");
 
-            // Cooldown
+            if (animator != null)
+                animator.ResetTrigger("Teleport");
+
+            UpdateTeleportUI();
+
+            // Wait for teleport cooldown.
             yield return new WaitForSeconds(teleportCooldown);
+
+            canTeleport = true;
+
+            UpdateTeleportUI();
         }
 
             
         // Torch
         public void ToggleTorch()
         {
-            if(isCoolingDown) return;
+            if (isDead || isCoolingDown)
+                return;
 
+            if (UI_Manager.Instance == null)
+                return;
+
+            // TORCH IS CURRENTLY ON: TURN IT OFF AND PAUSE DRAINING.
             if (isTorchOn)
             {
-                StopCoroutine(torchCoroutine);
-                torchCoroutine = null;
-                torchObject.SetActive(false);
                 isTorchOn = false;
-                UI_Manager.Instance.ShowNotification(UI_Manager.Instance.torchOffCanvas, UI_Manager.Instance.notificationStayDuration);
+                pauseTorchRoutine = true;
 
-                StartCoroutine(RefillRoutine());
+                if (torchObject != null)
+                    torchObject.SetActive(false);
+
+                UI_Manager.Instance.ShowNotification(
+                    UI_Manager.Instance.torchOffCanvas,
+                    UI_Manager.Instance.notificationStayDuration
+                );
+
+                return;
             }
-            else
-            {
+
+            // No remaining charge.
+            if (torchRemainingTime <= 0f)
+                return;
+
+            // TURN TORCH ON OR RESUME ITS PREVIOUS DRAIN.
+            isTorchOn = true;
+            pauseTorchRoutine = false;
+
+            if (torchObject != null)
+                torchObject.SetActive(true);
+
+            UI_Manager.Instance.ShowNotification(
+                UI_Manager.Instance.torchOnCanvas,
+                UI_Manager.Instance.notificationStayDuration * 1.5f
+            );
+
+            UI_Manager.Instance.FadeTorchSlider(true);
+
+            // Only start a new coroutine if one isn't already running.
+            if (torchCoroutine == null)
                 torchCoroutine = StartCoroutine(TorchRoutine());
-            }
         }
 
-        IEnumerator TorchRoutine()
+        private IEnumerator TorchRoutine()
         {
-            isTorchOn = true;
-            torchObject.SetActive(true);
-            UI_Manager.Instance.ShowNotification(UI_Manager.Instance.torchOnCanvas, UI_Manager.Instance.notificationStayDuration * 1.5f);
-            UI_Manager.Instance.FadeTorchSlider(true);
-            float timer = UI_Manager.Instance.torchDuration;
+            float duration = Mathf.Max(0.01f, UI_Manager.Instance.torchDuration);
 
-            while(timer > 0f)
+            while (torchRemainingTime > 0f)
             {
-                timer -= Time.deltaTime;
-                float progress = Mathf.Clamp01(timer/UI_Manager.Instance.torchDuration);
-                UI_Manager.Instance.torchSlider.value = progress;
-                torchFill.fillAmount = progress;
+                // Pause without losing the remaining time.
+                if (pauseTorchRoutine || !isTorchOn)
+                {
+                    yield return null;
+                    continue;
+                }
+
+                torchRemainingTime -= Time.deltaTime;
+
+                torchRemainingTime = Mathf.Max(0f, torchRemainingTime);
+
+                float progress = Mathf.Clamp01(
+                    torchRemainingTime / duration
+                );
+
+                UpdateTorchFill(progress);
 
                 yield return null;
             }
 
-            torchObject.SetActive(false);
-            isTorchOn = false;
-            torchCoroutine = null;
-            StartCoroutine(RefillRoutine());
-        }
+            // TORCH CHARGE IS EMPTY.
+            torchRemainingTime = 0f;
 
-        IEnumerator RefillRoutine()
+            isTorchOn = false;
+            pauseTorchRoutine = false;
+
+            if (torchObject != null)
+                torchObject.SetActive(false);
+
+            UpdateTorchFill(0f);
+
+            torchCoroutine = null;
+
+            // Automatically begin refilling.
+            if (torchRefillCoroutine == null)
+                torchRefillCoroutine = StartCoroutine(RefillRoutine());
+        }
+        private IEnumerator RefillRoutine()
         {
             isCoolingDown = true;
-            torchButton.interactable = false;
-            UI_Manager.Instance.FadeTorchSlider(false);
+
+            if (torchButton != null)
+                torchButton.interactable = false;
+
+            if (UI_Manager.Instance != null)
+                UI_Manager.Instance.FadeTorchSlider(false);
+
+            float refillDuration = Mathf.Max(
+                0.01f,
+                UI_Manager.Instance.torchRefillDuration
+            );
 
             float timer = 0f;
-            while (timer < UI_Manager.Instance.torchRefillDuration)
+
+            while (timer < refillDuration)
             {
                 timer += Time.deltaTime;
-                float progress = Mathf.Clamp01(timer/UI_Manager.Instance.torchRefillDuration);
-                UI_Manager.Instance.torchSlider.value = progress;
-                torchFill.fillAmount = progress;
+
+                float progress = Mathf.Clamp01(
+                    timer / refillDuration
+                );
+
+                UpdateTorchFill(progress);
 
                 yield return null;
             }
 
-            UI_Manager.Instance.ShowNotification(UI_Manager.Instance.torchReady, UI_Manager.Instance.notificationStayDuration * 1.5f);
-            UI_Manager.Instance.torchSlider.value = 1f;
-            torchFill.fillAmount = 1f;
-            torchButton.interactable = true;
+            // FULLY REFILLED.
+            torchRemainingTime = UI_Manager.Instance.torchDuration;
+
+            UpdateTorchFill(1f);
+
+            if (UI_Manager.Instance != null)
+            {
+                UI_Manager.Instance.ShowNotification(
+                    UI_Manager.Instance.torchReady,
+                    UI_Manager.Instance.notificationStayDuration * 1.5f
+                );
+            }
+
             isCoolingDown = false;
+            torchRefillCoroutine = null;
+
+            if (torchButton != null)
+                torchButton.interactable = true;
+        }
+
+
+        // Keeps both torch fill indicators synchronized.
+        private void UpdateTorchFill(float progress)
+        {
+            progress = Mathf.Clamp01(progress);
+
+            if (torchFill != null)
+                torchFill.fillAmount = progress;
+
+            if (UI_Manager.Instance != null &&
+                UI_Manager.Instance.torchSlider != null)
+            {
+                UI_Manager.Instance.torchSlider.value = progress;
+            }
         }
 
         #region Items Usage
@@ -941,18 +1092,44 @@ namespace PlayerControllers
             if (isDead || isTeleporting)
                 return;
 
-            if (StoreManager.Instance == null || UI_Manager.Instance == null)
-                return;
-
+            // Don't consume an inventory item if already at six charges.
             if (!UI_Manager.Instance.CanReceiveTeleportCharge())
+            {
+                UI_Manager.Instance.ShowTeleportFull();
                 return;
+            }
 
-            // Consume the store item
+            // Consume one inventory item.
             if (!StoreManager.Instance.UseItem(StoreItemType.Teleport))
                 return;
 
-            // Add teleport charge
+            // Add one teleport charge.
             UI_Manager.Instance.AddTeleportCharge();
+
+            UpdateTeleportUI();
+        }
+
+        // Updates teleport UI
+        public void UpdateTeleportUI()
+        {
+            float currentCharges = UI_Manager.Instance.GetTeleportCharge();
+
+            if (teleportFill != null)
+            {
+                teleportFill.fillAmount = currentCharges;
+            }
+
+            if (teleportButton != null)
+            {
+                teleportButton.interactable =
+                    currentCharges >= 0.2f &&
+                    canTeleport &&
+                    !isTeleporting &&
+                    !isDead;
+            }
+
+            Debug.Log($"Teleport UI Updated | Charges: {(currentCharges):P0}"
+            );
         }
 
         // Use extra life

@@ -174,11 +174,11 @@ public class Enemy : MonoBehaviour
         if (walkPointSet)
             agent.SetDestination(walkPoint);
 
-        enemyAnim.ResetTrigger("Run");
+        enemyAnim.ResetTrigger("Idle");
         enemyAnim.ResetTrigger("Shoot");
         enemyAnim.ResetTrigger("Walk");
 
-        enemyAnim.SetTrigger("Idle");
+        enemyAnim.SetTrigger("Run");
 
         Vector3 distanceToWalkPoint =
             transform.position - walkPoint;
@@ -187,10 +187,10 @@ public class Enemy : MonoBehaviour
         {
             walkPointSet = false;
 
-            enemyAnim.ResetTrigger("Run");
+            enemyAnim.ResetTrigger("Idle");
             enemyAnim.ResetTrigger("Shoot");
             enemyAnim.ResetTrigger("Walk");
-            enemyAnim.SetTrigger("Idle");
+            enemyAnim.SetTrigger("Run");
         }
     }
 

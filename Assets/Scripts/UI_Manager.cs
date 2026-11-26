@@ -83,15 +83,9 @@ public class UI_Manager : MonoBehaviour
     public float notificationStayDuration = 3.5f;
     public float notificationFadeOutDuration = 0.4f;
 
-    [Header("Teleport")]
-    [SerializeField] private Button teleportButton;
-    [SerializeField] private Image teleportFill;
-
-    public float teleportRefillDuration = 10f;
-    [SerializeField] private float teleportCost = 0.2f;
-
-    private float teleportCharge = 0f;
-    private bool wasTeleportFull = true;
+    [Header("Teleport Charges")]
+    public const int MAX_TELEPORT_CHARGES = 1;
+    [HideInInspector] public float teleportCharge = 0.2f;
 
     public CanvasGroup torchSliderCanvas, torchOnCanvas, torchOffCanvas;
     public Slider torchSlider;
@@ -101,10 +95,6 @@ public class UI_Manager : MonoBehaviour
     public float torchRefillDuration = 10f;
     public float torchDuration = 6f;
 
-    private float torchCharge = 1f;
-    private bool isTorchOn, isCoolingDown;
-    private bool torchLocked;
-    private Coroutine torchCoroutine;
     private Coroutine gameOverRoutine;
 
     private FPP_PlayerController playerController;
@@ -119,6 +109,7 @@ public class UI_Manager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        teleportCharge = 1f;
     }
 
     private void OnEnable()
@@ -281,10 +272,6 @@ public class UI_Manager : MonoBehaviour
         if (player != null)
             playerController = player.GetComponent<FPP_PlayerController>();
 
-        // TELEPORT BUTTON
-        if (teleportButton != null)
-            teleportButton.onClick.AddListener(UseTeleport);
-
         if (torchSlider != null)
             torchSlider.value = 1f;
 
@@ -304,8 +291,6 @@ public class UI_Manager : MonoBehaviour
         }
 
         ApplyAudioSettings();
-
-        UpdateTeleportUI();
 
         hasStarted = true;
         RestartIntroSequence();
@@ -408,66 +393,46 @@ public class UI_Manager : MonoBehaviour
     }
 
     #endregion
-
     // TELEPORT
-
-    public bool CanUseTeleport()
-    {
-        return teleportCharge >= 1f;
-    }
-
-    // Checks if another teleport charge can be added
+    // Checks whether another charge can be received.
     public bool CanReceiveTeleportCharge()
     {
-        return teleportCharge < 1f;
+        return teleportCharge < MAX_TELEPORT_CHARGES;
     }
 
-    // Adds a teleport charge
+    // Adds ONE teleport charge.
     public void AddTeleportCharge()
     {
-        teleportCharge = 6f;
-        UpdateTeleportUI();
+        teleportCharge = Mathf.Clamp(teleportCharge + 1, 0, MAX_TELEPORT_CHARGES);
         ShowTapToTeleport();
+        ShowTeleportFull();
+        UpdatePlayerTeleportUI();
     }
 
-    // Uses the teleport button
-    private void UseTeleport()
-    {
-        if (playerController == null)
-            return;
-
-        if (!CanUseTeleport())
-            return;
-
-        playerController.ActivateTeleport();
-    }
-
-    // Consumes teleport charge
+    // Consumes ONE teleport charge.
     public void ConsumeTeleportCharge()
     {
-        if (!CanUseTeleport())
+        if (teleportCharge < 0.2f)
             return;
 
-        teleportCharge--;
-
-        wasTeleportFull = false;
-
-        UpdateTeleportUI();
+        teleportCharge = Mathf.Max(0, Mathf.RoundToInt(teleportCharge) - 0.2f);
+        UpdatePlayerTeleportUI();
     }
 
-    // Updates teleport UI
-    private void UpdateTeleportUI()
-    {
-        if (teleportFill != null)
-            teleportFill.fillAmount = teleportCharge;
-
-        if (teleportButton != null)
-            teleportButton.interactable = CanUseTeleport();
-    }
-
+    // Returns the current number of charges.
     public float GetTeleportCharge()
     {
         return teleportCharge;
+    }
+
+    // Refreshes the player's teleport UI.
+    private void UpdatePlayerTeleportUI()
+    {
+        if(playerController = null)
+        {
+            playerController = FindFirstObjectByType<FPP_PlayerController>();
+            playerController.UpdateTeleportUI();
+        }
     }
 
     public void FadeTorchSlider(bool show)

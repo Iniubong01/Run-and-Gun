@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -96,7 +95,6 @@ public class StoreManager : MonoBehaviour
         LoadUpgradeSelections();
 
         ActivateSelectedUpgrades();
-        // UpdateItemHUD();
         UpdateCoinUI();
     }
 
